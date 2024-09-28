@@ -312,19 +312,102 @@ class User
 
   function updateDerpartment($json)
   {
+    //{"dep_name":"bea","dep_id":2}
     include "connection.php";
     $data = json_decode($json, true);
-    $sql = "UPDATE tbl_departments SET dep_name = :dep_name WHERE dep_id = :dep_id";
+    $sql = "UPDATE tbl_departments SET dept_name = :dept_name WHERE dept_id = :dept_id";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam(":dep_name", $data["dep_name"]);
-    $stmt->bindParam(":dep_id", $data["dep_id"]);
+    $stmt->bindParam(":dept_name", $data["dept_name"]);
+    $stmt->bindParam(":dept_id", $data["dept_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+
+  function updateSchoolYear($json)
+  {
+    //{"sy_name":"bea","sy_id":2}
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_sy SET sy_name = :sy_name WHERE sy_id = :sy_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":sy_name", $data["sy_name"]);
+    $stmt->bindParam(":sy_id", $data["sy_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+
+  function updateCourse($json)
+  {
+    //{"crs_name":"bea","crs_dept_id":2, "crs_id":1}
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_course SET crs_name = :crs_name, crs_dept_id = :crs_dept_id WHERE crs_id = :crs_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":crs_name", $data["crs_name"]);
+    $stmt->bindParam(":crs_dept_id", $data["crs_dept_id"]);
+    $stmt->bindParam(":crs_id", $data["crs_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function updateScholarshipType($json)
+  {
+
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_scholarship_type SET type_name = :type_name WHERE type_id = :type_id";
+    $stsmt->bindParam(":type_name", $data["type_name"]);
+    $stmt->bindParam(":type_id", $data["type_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+
+  function updateOfficeMaster($json)
+  {
+    //{"off_name":"bea", "off_subject_code": "bea", "off_descriptive_title": "bea", off_section: "bea", "off_room": "bea", "off_type_id": 1, "off_timeIn": 1, "off_timeOut": 1, "off_dayRemote": "wednesday", "off_remoteTimeIn": 1, "off_remoteTimeOut": 1, "off_id": 1792}
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_office_master SET off_name = :off_name, off_subject_code = :off_subject_code, off_descriptive_title = :off_descriptive_title, 
+    off_section = :off_section, off_room = :off_room, off_type_id = :off_type_id, off_timeIn = :off_timeIn, off_timeOut = :off_timeOut, 
+    off_dayRemote = :off_dayRemote, off_remoteTimeIn = :off_remoteTimeIn, off_remoteTimeOut = :off_remoteTimeOut WHERE off_id = :off_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":off_name", $data["off_name"]);
+    $stmt->bindParam(":off_subject_code", $data["off_subject_code"]);
+    $stmt->bindParam(":off_descriptive_title", $data["off_descriptive_title"]);
+    $stmt->bindParam(":off_section", $data["off_section"]);
+    $stmt->bindParam(":off_room", $data["off_room"]);
+    $stmt->bindParam(":off_type_id", $data["off_type_id"]);
+    $stmt->bindParam(":off_timeIn", $data["off_timeIn"]);
+    $stmt->bindParam(":off_timeOut", $data["off_timeOut"]);
+    $stmt->bindParam(":off_dayRemote", $data["off_dayRemote"]);
+    $stmt->bindParam(":off_remoteTimeIn", $data["off_remoteTimeIn"]);
+    $stmt->bindParam(":off_remoteTimeOut", $data["off_remoteTimeOut"]);
+    $stmt->bindParam(":off_id", $data["off_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+
+  function updateScholar($json)
+  {
+    //{"stud_school_id":1, "stud_password" :"beamell", "stud_last_name":"bea", "stud_first_name":"bea", "stud_year_level":1, "stud_scholarship_type_id":1, "stud_scholarship_sub_type_id":1, "stud_course_id":1, "stud_id":1}
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_scholars SET stud_school_id = :stud_school_id, stud_password = :stud_password, stud_last_name = :stud_last_name, 
+    stud_first_name = :stud_first_name, stud_year_level = :stud_year_level, stud_scholarship_type_id = :stud_scholarship_type_id, 
+    stud_scholarship_sub_type_id = :stud_scholarship_sub_type_id, stud_course_id = :stud_course_id WHERE stud_id  = :stud_id ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":stud_school_id", $data["stud_school_id"]);
+    $stmt->bindParam(":stud_password", $data["stud_password"]);
+    $stmt->bindParam(":stud_last_name", $data["stud_last_name"]);
+    $stmt->bindParam(":stud_first_name", $data["stud_first_name"]);
+    $stmt->bindParam(":stud_year_level", $data["stud_year_level"]);
+    $stmt->bindParam(":stud_scholarship_type_id", $data["stud_scholarship_type_id"]);
+    $stmt->bindParam(":stud_scholarship_sub_type_id", $data["stud_scholarship_sub_type_id"]);
+    $stmt->bindParam(":stud_course_id", $data["stud_course_id"]);
+    $stmt->bindParam(":stud_id", $data["stud_id"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
 }
-
-
-
 
 $json = isset($_POST["json"]) ? $_POST["json"] : "0";
 $operation = isset($_POST["operation"]) ? $_POST["operation"] : "0";
@@ -436,9 +519,31 @@ switch ($operation) {
     echo $user->updateAdmin($json);
     break;
 
+  case "updateDerpartment":
+    echo $user->updateDerpartment($json);
+    break;
 
+  case "updateSchoolYear":
+    echo $user->updateSchoolYear($json);
+    break;
+
+  case "updateCourse":
+    echo $user->updateCourse($json);
+    break;
+
+  case "updateScholarshipType":
+    echo $user->updateScholarshipType($json);
+    break;
+
+  case "updateOfficeMaster":
+    echo $user->updateOfficeMaster($json);
+    break;
+
+  case "updateScholar":
+    echo $user->updateScholar($json);
+    break;
 
   default:
-    echo "WALAY " . $operation . " NGA OPERATION SA UBOS HAHHAHA BOBO";
+    echo "WALAY " . $operation . " NGA OPERATION SA UBOS HAHHAHA BOBO NOYNAY";
     break;
 }
