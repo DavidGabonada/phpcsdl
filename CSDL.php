@@ -36,11 +36,11 @@ class User
   {
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_sy(sy_name, sy_status)
-    VALUES(:sy_name, :sy_status)";
+    $sql = "INSERT INTO tbl_sy(sy_name)
+    VALUES(:sy_name)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("sy_name", $json["sy_name"]);
-    $stmt->bindParam("sy_status", $json["sy_status"]);
+    // $stmt->bindParam("sy_status", $json["sy_status"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -58,8 +58,9 @@ class User
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
 
-  function addScholarship_type($json)
+  function addScholarshipType($json)
   {
+    // {"type_name":"bea"}
     include "connection.php";
     $json = json_decode($json, true);
     $sql = "INSERT INTO tbl_scholarship_type(type_name)
@@ -98,7 +99,7 @@ class User
   {
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_departments(stype_type_id, stype_name, stype_max_hours)
+    $sql = "INSERT INTO tbl_schoolar_sub_type(stype_type_id, stype_name, stype_max_hours)
     VALUES(:stype_type_id, :stype_name, :stype_max_hours)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("stype_type_id", $json["stype_type_id"]);
@@ -111,12 +112,13 @@ class User
 
   function addOfficeMaster($json)
   {
+    //{"off_subject":"bea", "off_descriptive_title": "bea", "off_section": "bea", "off_room": "bea", "off_type_id": 1, off_timeIn: 1, off_timeOut: 1, off_dayRemote: "wednesday", off_remoteTimeIn: 1, off_remoteTimeOut: 1}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_office_master(off_name, off_subject_code, off_descriptive_title, off_section, off_room, off_type_id, off_timeIn, off_timeOut, off_dayRemote, off_remoteTimeIn, off_remoteTimeOut)
-    VALUES(:off_name, :off_subject_code, :off_descriptive_title, :off_section, :off_room, :off_type_id, :off_timeIn, :off_timeOut :off_dayRemote, :off_remoteTimeIn, :off_remoteTimeOut)";
+    $sql = "INSERT INTO tbl_office_master(off_subject_code, off_descriptive_title, off_section, off_room, off_type_id, off_timeIn, off_timeOut, off_dayRemote, off_remoteTimeIn, off_remoteTimeOut)
+    VALUES(:off_subject_code, :off_descriptive_title, :off_section, :off_room, :off_type_id, :off_timeIn, :off_timeOut, :off_dayRemote, :off_remoteTimeIn, :off_remoteTimeOut)";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam("off_name", $json["off_name"]);
+    // $stmt->bindParam("off_name", $json["off_name"]);
     $stmt->bindParam("off_subject_code", $json["off_subject_code"]);
     $stmt->bindParam("off_descriptive_title", $json["off_descriptive_title"]);
     $stmt->bindParam("off_section", $json["off_section"]);
@@ -183,7 +185,7 @@ class User
     $sql = "SELECT * FROM tbl_scholars";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
-    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    return $stmt->rowCount() > 0 ? json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)) : 0;
   }
 
   function getSchoolYearLevel()
@@ -231,7 +233,7 @@ class User
     $sql = "SELECT * FROM tbl_departments";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
-    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    return $stmt->rowCount() > 0 ? json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)) : 0;
   }
   function getScholarTypeList()
   {
@@ -428,8 +430,8 @@ switch ($operation) {
     echo $user->addCourse($json);
     break;
 
-  case "addScholarship_type":
-    echo $user->addScholarship_type($json);
+  case "addScholarshipType":
+    echo $user->addScholarshipType($json);
     break;
 
   case "addScholar":
@@ -444,10 +446,6 @@ switch ($operation) {
     echo $user->addOfficeMaster($json);
     break;
 
-  case "addScholarship_type":
-    echo $user->addScholarship_type($json);
-    break;
-
   case "addadministrator":
     echo $user->addadministrator($json);
     break;
@@ -456,7 +454,7 @@ switch ($operation) {
     echo $user->getAddScholarDropDown();
     break;
 
-  case "getscholarship_type":
+  case "getscholarshipType":
     echo $user->getscholarship_type();
     break;
 
@@ -491,6 +489,7 @@ switch ($operation) {
   case "getcourse":
     echo $user->getcourse();
     break;
+
   case "getSubType":
     echo $user->getSubType();
     break;
@@ -509,6 +508,10 @@ switch ($operation) {
 
   case "getScholarTypeList":
     echo $user->getScholarTypeList();
+    break;
+
+  case "getscholarship_type_list":
+    echo $user->getscholarship_type_list();
     break;
 
   case "getAllList":
