@@ -97,14 +97,15 @@ class User
   function addSchoolar_sub_type($json)
 
   {
+    //{"stype_type_id":1, "stype_name":"bea", "stype_dutyhours_id":1}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_schoolar_sub_type(stype_type_id, stype_name, stype_max_hours)
-    VALUES(:stype_type_id, :stype_name, :stype_max_hours)";
+    $sql = "INSERT INTO tbl_scholarship_sub_type(stype_type_id, stype_name, stype_dutyhours_id)
+    VALUES(:stype_type_id, :stype_name, :stype_dutyhours_id)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("stype_type_id", $json["stype_type_id"]);
     $stmt->bindParam("stype_name", $json["stype_name"]);
-    $stmt->bindParam("stype_max_hours", $json["stype_max_hours"]);
+    $stmt->bindParam("stype_dutyhours_id", $json["stype_dutyhours_id"]);
 
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
@@ -138,7 +139,7 @@ class User
   function getscholarship_type()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_scholarship_type";
+    $sql = "SELECT * FROM tbl_scholarship_type WHERE type_status = 1";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
@@ -147,7 +148,7 @@ class User
   function getcourse()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_course";
+    $sql = "SELECT * FROM tbl_course WHERE crs_status = 1";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
@@ -173,7 +174,7 @@ class User
   function getschoolyear()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_sy";
+    $sql = "SELECT * FROM tbl_sy WHERE sy_status = 1";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -195,6 +196,23 @@ class User
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+  function getDutyHours()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_duty_hours";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+
+  function getsublist()
+  {
+    include "connection.php";
+    $returnValue = [];
+    $returnValue["getDutyHours"] = $this->getDutyHours();
+    $returnValue["scholarshipType"] = $this->getscholarship_type();
+    return json_encode($returnValue);
   }
 
   function getAddScholarDropDown()
@@ -230,7 +248,7 @@ class User
   function getDepartment()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_departments";
+    $sql = "SELECT * FROM tbl_departments WHERE dept_status = 1";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)) : 0;
@@ -273,11 +291,12 @@ class User
   function getScholarshipSubType()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_scholarship_sub_type";
+    $sql = "SELECT * FROM tbl_scholarship_sub_type WHERE stype_id = 1";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
+
 
   function getAllList()
   {
@@ -324,6 +343,7 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
+
 
   function updateSchoolYear($json)
   {
@@ -409,6 +429,57 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
+  function deleteDepartment($json)
+  {
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_departments SET dept_status = 0 WHERE dept_id = :dept_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":dept_id", $data["dept_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function deleteSchoolYear($json)
+  {
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_sy SET sy_status = 0 WHERE sy_id = :sy_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":sy_id", $data["sy_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+
+  function deleteCourse($json)
+  {
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_course SET crs_status = 0 WHERE crs_id = :crs_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":crs_id", $data["crs_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function deleteScholarshipSub($json)
+  {
+    include "connection.php";
+    $data = json_decode($jjson, true);
+    $sql = "UPDATE tbl_scholarship_sub_type SET stype_status = 0 WHERE stype_id = :stype_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":stype_id", $data["stype_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function deleteScholarshipType($json)
+  {
+    include "connection.php";
+    $data = json_decode($json, true);
+    $sql = "UPDATE tbl_scholarship_type SET type_status = 0 WHERE type_id = :type_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":type_id", $data["type_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
 }
 
 $json = isset($_POST["json"]) ? $_POST["json"] : "0";
@@ -454,12 +525,12 @@ switch ($operation) {
     echo $user->getAddScholarDropDown();
     break;
 
-  case "getscholarshipType":
-    echo $user->getscholarship_type();
+  case "getscholarship_type":
+    echo json_encode($user->getscholarship_type());
     break;
 
   case "getschoolyear":
-    echo $user->getschoolyear();
+    echo json_encode($user->getschoolyear());
     break;
 
   case "getSupervisor":
@@ -478,6 +549,10 @@ switch ($operation) {
     echo $user->getCourseList();
     break;
 
+  case "getDutyHours":
+    echo json_encode($user->getDutyHours());
+    break;
+
   case "getSchoolYearList":
     echo $user->getSchoolYearList();
     break;
@@ -487,7 +562,7 @@ switch ($operation) {
     break;
 
   case "getcourse":
-    echo $user->getcourse();
+    echo json_encode($user->getcourse());
     break;
 
   case "getSubType":
@@ -512,6 +587,10 @@ switch ($operation) {
 
   case "getscholarship_type_list":
     echo $user->getscholarship_type_list();
+    break;
+
+  case "getsublist":
+    echo $user->getsublist();
     break;
 
   case "getAllList":
@@ -544,6 +623,26 @@ switch ($operation) {
 
   case "updateScholar":
     echo $user->updateScholar($json);
+    break;
+
+  case "deleteDepartment":
+    echo $user->deleteDepartment($json);
+    break;
+
+  case "deleteSchoolYear":
+    echo $user->deleteSchoolYear($json);
+    break;
+
+  case "deleteCourse":
+    echo $user->deleteCourse($json);
+    break;
+
+  case "deleteScholarshipSub":
+    echo $user->deleteScholarshipSub($json);
+    break;
+
+  case "deleteScholarshipType";
+    echo $user->deleteScholarshipType($json);
     break;
 
   default:
