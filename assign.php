@@ -19,7 +19,6 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
-
     function addAssignment_Schedule($json)
     {
         include "connection.php";
@@ -29,7 +28,6 @@ class User
         VALUES(:sched_id, :sched_assignment_id, :sched_asgn_stud_id, :sched_day, :sched_start_time, :sched_end_time, :sched_id, 
         :sched_assignment_id, :sched_asgn_stud_id, :sched_day, :sched_start_time, :sched_end_time	)";
         $stmt = $conn->prepare($sql);
-
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
@@ -47,7 +45,6 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
-
     function AddOfficeType($json)
     {
         include "connection.php";
@@ -61,7 +58,6 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
-
     function AddOfficeSchedule($json)
     {
         include "connection.php";
@@ -108,7 +104,6 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
-
     function AddFreshmenRequirmentDetails($json)
     {
         include "connection.php";
@@ -124,7 +119,6 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
-
     function AddFreshmenRequirmentDetailsMaster($json)
     {
         include "connection.php";
@@ -138,7 +132,6 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
-
     function AddFreshmenReferral($json)
     {
         include "connection.php";
@@ -154,54 +147,68 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
+    function AddBuilding($json)
+    {
+        include "connection.php";
+        $json = json_decode($json, true);
+        $sql = "INSERT INTO tbl_building(build_id, build_name)
+        VALUES(:build_id, :build_name)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindParam("build_id", $json["build_id"]);
+        $stmt->bindParam("build_name", $json["build_name"]);
+        $stmt->execute();
+        return $stmt->rowCount() > 0 ? 1 : 0;
+    }
+
+    function getScholarList()
+    {
+        include "connection.php";
+        $sql = "SELECT a.stud_first_name, a.stud_last_name, b.supM_first_name, b.supM_last_name WHERE stype_id = 1";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    }
 }
 $json = isset($_POST["json"]) ? $_POST["json"] : "0";
 $operation = isset($_POST["operation"]) ? $_POST["operation"] : "0";
-
 $user = new User();
-
 switch ($operation) {
-
     case "addAssignment":
         echo $user->addAssignment($json);
         break;
-
     case "addAssignment_Schedule":
         echo $user->addAssignment_Schedule($json);
         break;
-
     case "AddSemester":
         echo $user->AddSemester($json);
         break;
-
     case "AddOfficeType":
         echo $user->AddOfficeType($json);
         break;
-
     case "AddOfficeSchedule":
         echo $user->AddOfficeSchedule($json);
         break;
-
     case "AddOffencesChart":
         echo $user->AddOffencesChart($json);
         break;
-
     case "AddJobType":
         echo $user->AddJobType($json);
         break;
-
     case "AddFreshmenRequirmentDetails":
         echo $user->AddFreshmenRequirmentDetails($json);
         break;
-
     case "AddFreshmenRequirmentDetailsMaster":
         echo $user->AddFreshmenRequirmentDetailsMaster($json);
         break;
-
     case "AddFreshmenReferral":
         echo $user->AddFreshmenReferral($json);
         break;
-
+    case "AddBuilding":
+        echo $user->AddBuilding($json);
+        break;
+    case "getScholarList":
+        echo $user->getScholarList();
+        break;
     default:
         echo "WALAY " . $operation . " NGA OPERATION SA UBOS HAHHAHA BOBO NOYNAY";
         break;

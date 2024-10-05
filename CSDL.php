@@ -314,6 +314,16 @@ class User
     return json_encode($returnValue);
   }
 
+  function getAllScholarList()
+  {
+    include "connection.php";
+    $returnValue = [];
+    $returnValue["scholarshiptypelist"] = $this->getscholarship_type_list();
+    $returnValue["courselist"] = $this->getCourseList();
+    $returnValue["SchoolYearLevel"] = $this->getSchoolYearLevel();
+    return json_encode($returnValue);
+  }
+
   function updateAdmin($json)
   {
     //{"adm_employee_id":1, "adm_first_name":"bea","adm_last_name":"macario", "adm_password":"143llove", "adm_email": "beamacario@gmail.com", "adm_id":1}
@@ -570,7 +580,7 @@ switch ($operation) {
     break;
 
   case "getSchoolYearLevel":
-    echo $user->getSchoolYearLevel();
+    echo json_encode($user->getSchoolYearLevel());
     break;
 
   case "getDepartment":
@@ -595,6 +605,10 @@ switch ($operation) {
 
   case "getAllList":
     echo $user->getAllList();
+    break;
+
+  case "getAllScholarList":
+    echo $user->getAllScholarList();
     break;
 
   case "updateAdmin":
