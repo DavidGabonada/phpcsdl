@@ -21,6 +21,7 @@ class User
   }
   function addDepartment($json)
   {
+    //{"dept_name":"bea"}
     include "connection.php";
     $json = json_decode($json, true);
     $sql = "INSERT INTO tbl_departments(dept_name)
@@ -81,7 +82,6 @@ class User
     VALUES(:stud_school_id, :stud_firstname, :stud_lastname, :stud_year_level, :scholarship_type_id, :stud_scholarship_sub_id, :stud_course_id)";
     $stmt = $conn->prepare($sql);
 
-
     $stmt->bindParam("stud_firstname", $json["stud_firstname"]);
     $stmt->bindParam("stud_lastname", $json["stud_lastname"]);
     $stmt->bindParam("stud_year_level", $json["stud_year_level"]);
@@ -89,6 +89,24 @@ class User
     $stmt->bindParam("stud_scholarship_sub_id", $json["stud_scholarship_sub_id"]);
     $stmt->bindParam("stud_course_id", $json["stud_course_id"]);
     $stmt->bindParam("stud_school_id", $json["stud_school_id"]);
+
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+
+  function addAssignStudent($json)
+  {
+    //{stud_school_id":02-2021-03668,"stud_firstname":"joe","stud_lastname":"rogan","stud_scholarship_type_id":2}
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT INTO tbl_scholars(stud_school_id, stud_first_name, stud_last_name, stud_scholarship_type_id)
+    VALUES(:stud_school_id, :stud_firstname, :stud_lastname, :stud_scholarship_type_id)";
+    $stmt = $conn->prepare($sql);
+
+    $stmt->bindParam("stud_school_id", $json["stud_school_id"]);
+    $stmt->bindParam("stud_firstname", $json["stud_firstname"]);
+    $stmt->bindParam("stud_lastname", $json["stud_lastname"]);
+    $stmt->bindParam("stud_scholarship_type_id", $json["stud_scholarship_type_id"]);
 
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
@@ -107,6 +125,43 @@ class User
     $stmt->bindParam("stype_name", $json["stype_name"]);
     $stmt->bindParam("stype_dutyhours_id", $json["stype_dutyhours_id"]);
 
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function AddBuilding($json)
+  {
+    //{"build_name":"MS - Main South"}
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT INTO tbl_building(build_name)
+      VALUES(:build_name)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam("build_name", $json["build_name"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function AddRoom($json)
+  {
+    //{"room_number":"103"}
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT INTO tbl_room(room_number)
+      VALUES(:room_number)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam("room_number", $json["room_number"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function AddSubject($json)
+  {
+    //{"subject_code":"ITE 103", "subject_name": "Quantitative Reasoning"}
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT INTO tbl_subject(subject_code, subject_name)
+      VALUES(:subject_code, :subject_name)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam("subject_code", $json["subject_code"]);
+    $stmt->bindParam("subject_name", $json["subject_name"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -279,7 +334,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getSupervisor()
   {
     include "connection.php";
@@ -295,6 +349,52 @@ class User
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+
+  function getDays()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_day";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+  function getBuilding()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_building";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+
+  function getRoom()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_room";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+  function getSubject()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_subject";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+
+  function getDutyAssign()
+  {
+    include "connection.php";
+    $returnValue = [];
+    $returnValue["getRoom"] = $this->getRoom();
+    $returnValue["getBuilding"] = $this->getBuilding();
+    $returnValue["getDays"] = $this->getDays();
+    $returnValue["getSubject"] = $this->getSubject();
+    $returnValue["getDutyHours"] = $this->getDutyHours();
+    return json_encode($returnValue);
   }
 
 
@@ -518,6 +618,9 @@ switch ($operation) {
   case "addScholar":
     echo $user->addScholar($json);
     break;
+  case "addAssignStudent":
+    echo $user->addAssignStudent($json);
+    break;
 
   case "addSchoolar_sub_type":
     echo $user->addSchoolar_sub_type($json);
@@ -529,6 +632,15 @@ switch ($operation) {
 
   case "addadministrator":
     echo $user->addadministrator($json);
+    break;
+  case "AddBuilding":
+    echo $user->AddBuilding($json);
+    break;
+  case "AddRoom":
+    echo $user->AddRoom($json);
+    break;
+  case "AddSubject":
+    echo $user->AddSubject($json);
     break;
 
   case "getAddScholarDropDown":
@@ -601,6 +713,22 @@ switch ($operation) {
 
   case "getsublist":
     echo $user->getsublist();
+    break;
+
+  case "getDays":
+    echo json_encode($user->getDays());
+    break;
+  case "getBuilding":
+    echo json_encode($user->getBuilding());
+    break;
+  case "getRoom":
+    echo json_encode($user->getRoom());
+    break;
+  case "getSubject":
+    echo json_encode($user->getSubject());
+    break;
+  case "getDutyAssign":
+    echo $user->getDutyAssign();
     break;
 
   case "getAllList":

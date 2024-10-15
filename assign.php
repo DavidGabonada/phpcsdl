@@ -147,18 +147,6 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? 1 : 0;
     }
-    function AddBuilding($json)
-    {
-        include "connection.php";
-        $json = json_decode($json, true);
-        $sql = "INSERT INTO tbl_building(build_id, build_name)
-        VALUES(:build_id, :build_name)";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindParam("build_id", $json["build_id"]);
-        $stmt->bindParam("build_name", $json["build_name"]);
-        $stmt->execute();
-        return $stmt->rowCount() > 0 ? 1 : 0;
-    }
 
     function getScholarList()
     {
@@ -202,9 +190,6 @@ switch ($operation) {
         break;
     case "AddFreshmenReferral":
         echo $user->AddFreshmenReferral($json);
-        break;
-    case "AddBuilding":
-        echo $user->AddBuilding($json);
         break;
     case "getScholarList":
         echo $user->getScholarList();
