@@ -73,22 +73,32 @@ class User
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
 
-  function addScholar($json)
+  function AddScholar($json)
   {
-    // {"stud_firstname":"joe","stud_lastname":"rogan","stud_year_level":"1st Year","stud_course_id":1,"scholarship_type_id":1,"stud_scholarship_sub_id":2}
+    // {"stud_school_id":"02-2223-08904", "stud_last_name" :"Ignalig", "stud_first_name":"Kitty", "stud_middle_name":"Tanhaga-Doble", "stud_course_id":1,"stud_year_level":3, "stud_scholarship_type_id":9, "stud_scholarship_sub_type_id":1,"stud_password":"IloveXena143","stud_contact_number":"0991234533","stud_email":"xenamylove@gmail.com"}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_scholars(stud_school_id, stud_first_name, stud_last_name, stud_year_level, stud_scholarship_type_id, stud_scholarship_sub_type_id, stud_course_id) 
-    VALUES(:stud_school_id, :stud_firstname, :stud_lastname, :stud_year_level, :scholarship_type_id, :stud_scholarship_sub_id, :stud_course_id)";
+    $sql = "INSERT INTO tbl_scholars (
+      stud_school_id, stud_last_name, stud_first_name, stud_middle_name, stud_course_id, stud_year_level, stud_scholarship_type_id, stud_scholarship_sub_type_id,
+      stud_password, stud_contact_number, stud_email, stud_typeScholar_id) 
+  VALUES(:stud_school_id, :stud_last_name, :stud_first_name, :stud_middle_name, :stud_course_id, :stud_year_level, :stud_scholarship_type_id, :stud_scholarship_sub_type_id,
+  :stud_password, :stud_contact_number, :stud_email, :stud_typeScholar_id)";
+
     $stmt = $conn->prepare($sql);
 
-    $stmt->bindParam("stud_firstname", $json["stud_firstname"]);
-    $stmt->bindParam("stud_lastname", $json["stud_lastname"]);
-    $stmt->bindParam("stud_year_level", $json["stud_year_level"]);
-    $stmt->bindParam("scholarship_type_id", $json["scholarship_type_id"]);
-    $stmt->bindParam("stud_scholarship_sub_id", $json["stud_scholarship_sub_id"]);
-    $stmt->bindParam("stud_course_id", $json["stud_course_id"]);
-    $stmt->bindParam("stud_school_id", $json["stud_school_id"]);
+    // Bind parameters
+    $stmt->bindParam(':stud_school_id', $json['stud_school_id']);
+    $stmt->bindParam(':stud_last_name', $json['stud_last_name']);
+    $stmt->bindParam(':stud_first_name', $json['stud_first_name']);
+    $stmt->bindParam(':stud_middle_name', $json['stud_middle_name']);
+    $stmt->bindParam(':stud_course_id', $json['stud_course_id']);
+    $stmt->bindParam(':stud_year_level', $json['stud_year_level']);
+    $stmt->bindParam(':stud_scholarship_type_id', $json['stud_scholarship_type_id']);
+    $stmt->bindParam(':stud_scholarship_sub_type_id', $json['stud_scholarship_sub_type_id']);
+    $stmt->bindParam(':stud_password', $json['stud_password']); // Hashing the password
+    $stmt->bindParam(':stud_contact_number', $json['stud_contact_number']);
+    $stmt->bindParam(':stud_email', $json['stud_email']);
+    $stmt->bindParam(':stud_typeScholar_id', $json['stud_typeScholar_id']);
 
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
@@ -189,6 +199,26 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
+  function AddModality($json)
+  {
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT INTO tbl_stud_type_scholars(stypeScholar_name)
+    VALUES(:stypeScholar_name)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam("stypeScholar_name", $json["stypeScholar_name"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+  function getAdmin()
+  {
+    include "connection.php";
+    $stmt = "SELECT * FROM tbl_admin";
+    $stmt = $conn->prepare($stmt);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
+  }
+
 
 
   function getscholarship_type()
@@ -278,6 +308,7 @@ class User
     $returnValue["course"] = $this->getcourse();
     $returnValue["scholarshipType"] = $this->getscholarship_type();
     $returnValue["scholarshipSub"] = $this->getSubType();
+    $returnValue["modality"] = $this->getModality();
 
     return json_encode($returnValue);
   }
@@ -380,6 +411,14 @@ class User
   {
     include "connection.php";
     $sql = "SELECT * FROM tbl_subject";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+  function getModality()
+  {
+    include "connection.php";
+    $sql = "SELECT  * FROM tbl_stud_type_scholars";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -615,8 +654,8 @@ switch ($operation) {
     echo $user->addScholarshipType($json);
     break;
 
-  case "addScholar":
-    echo $user->addScholar($json);
+  case "AddScholar":
+    echo $user->AddScholar($json);
     break;
   case "addAssignStudent":
     echo $user->addAssignStudent($json);
@@ -642,11 +681,15 @@ switch ($operation) {
   case "AddSubject":
     echo $user->AddSubject($json);
     break;
-
+  case "AddModality":
+    echo $user->AddModality($json);
+    break;
   case "getAddScholarDropDown":
     echo $user->getAddScholarDropDown();
     break;
-
+  case "getAdmin":
+    echo json_encode($user->getAdmin());
+    break;
   case "getscholarship_type":
     echo json_encode($user->getscholarship_type());
     break;
@@ -730,27 +773,24 @@ switch ($operation) {
   case "getDutyAssign":
     echo $user->getDutyAssign();
     break;
-
+  case "getModality":
+    echo json_encode($user->getModality());
+    break;
   case "getAllList":
     echo $user->getAllList();
     break;
-
   case "getAllScholarList":
     echo $user->getAllScholarList();
     break;
-
   case "updateAdmin":
     echo $user->updateAdmin($json);
     break;
-
   case "updateDerpartment":
     echo $user->updateDerpartment($json);
     break;
-
   case "updateSchoolYear":
     echo $user->updateSchoolYear($json);
     break;
-
   case "updateCourse":
     echo $user->updateCourse($json);
     break;
