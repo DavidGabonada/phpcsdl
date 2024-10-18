@@ -3,7 +3,6 @@ include "headers.php";
 
 class User
 {
-
   function addadministrator($json)
   {
     include "connection.php";
@@ -15,7 +14,6 @@ class User
     $stmt->bindParam("adm_last_name", $json["adm_last_name"]);
     $stmt->bindParam("adm_password", $json["adm_password"]);
     $stmt->bindParam("adm_email", $json["adm_email"]);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -24,18 +22,13 @@ class User
     //{"dept_name":"bea"}
     include "connection.php";
     $json = json_decode($json, true);
-    // if (recordExists($json["dept_name"], "tbl_departments", "dept_name")) {
-    //   return -1;
-    // }
     $sql = "INSERT INTO tbl_departments(dept_name)
     VALUES(:dept_name)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("dept_name", $json["dept_name"]);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function addSchoolyear($json)
   {
     include "connection.php";
@@ -48,7 +41,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function addCourse($json)
   {
     include "connection.php";
@@ -61,7 +53,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function addScholarshipType($json)
   {
     // {"type_name":"bea"}
@@ -71,28 +62,21 @@ class User
     VALUES(:type_name)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("type_name", $json["type_name"]);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function AddScholar($json)
   {
     // {"stud_school_id":"02-2223-08904", "stud_last_name" :"Ignalig", "stud_first_name":"Kitty", "stud_middle_name":"Tanhaga-Doble", "stud_course_id":1,"stud_year_level":3, "stud_scholarship_type_id":9, "stud_scholarship_sub_type_id":1,"stud_contact_number":"0991234533","stud_email":"xenamylove@gmail.com"}
     include "connection.php";
     $json = json_decode($json, true);
-    $password = $json["stud_school_id"] . substr($json["stud_last_name"], 0, 2);
-    // echo $password;
-    // die();
+    $password = substr($json["stud_last_name"], 0, 2) . $json["stud_school_id"];
     $sql = "INSERT INTO tbl_scholars (
-      stud_school_id, stud_last_name, stud_first_name, stud_middle_name, stud_course_id, stud_year_level, stud_scholarship_type_id, stud_scholarship_sub_type_id,
-      stud_password, stud_contact_number, stud_email, stud_typeScholar_id) 
-  VALUES(:stud_school_id, :stud_last_name, :stud_first_name, :stud_middle_name, :stud_course_id, :stud_year_level, :stud_scholarship_type_id, :stud_scholarship_sub_type_id,
-  :stud_password, :stud_contact_number, :stud_email, :stud_typeScholar_id)";
-
+    stud_school_id, stud_last_name, stud_first_name, stud_middle_name, stud_course_id, stud_year_level, stud_scholarship_type_id, stud_scholarship_sub_type_id,
+    stud_password, stud_contact_number, stud_email, stud_typeScholar_id) 
+    VALUES(:stud_school_id, :stud_last_name, :stud_first_name, :stud_middle_name, :stud_course_id, :stud_year_level, :stud_scholarship_type_id, :stud_scholarship_sub_type_id,
+    :stud_password, :stud_contact_number, :stud_email, :stud_typeScholar_id)";
     $stmt = $conn->prepare($sql);
-
-    // Bind parameters
     $stmt->bindParam(':stud_school_id', $json['stud_school_id']);
     $stmt->bindParam(':stud_last_name', $json['stud_last_name']);
     $stmt->bindParam(':stud_first_name', $json['stud_first_name']);
@@ -101,15 +85,13 @@ class User
     $stmt->bindParam(':stud_year_level', $json['stud_year_level']);
     $stmt->bindParam(':stud_scholarship_type_id', $json['stud_scholarship_type_id']);
     $stmt->bindParam(':stud_scholarship_sub_type_id', $json['stud_scholarship_sub_type_id']);
-    $stmt->bindParam(':stud_password', $password); // Hashing the password
+    $stmt->bindParam(':stud_password', $password);
     $stmt->bindParam(':stud_contact_number', $json['stud_contact_number']);
     $stmt->bindParam(':stud_email', $json['stud_email']);
     $stmt->bindParam(':stud_typeScholar_id', $json['stud_typeScholar_id']);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function addAssignStudent($json)
   {
     //{stud_school_id":02-2021-03668,"stud_firstname":"joe","stud_lastname":"rogan","stud_scholarship_type_id":2}
@@ -118,18 +100,14 @@ class User
     $sql = "INSERT INTO tbl_scholars(stud_school_id, stud_first_name, stud_last_name, stud_scholarship_type_id)
     VALUES(:stud_school_id, :stud_firstname, :stud_lastname, :stud_scholarship_type_id)";
     $stmt = $conn->prepare($sql);
-
     $stmt->bindParam("stud_school_id", $json["stud_school_id"]);
     $stmt->bindParam("stud_firstname", $json["stud_firstname"]);
     $stmt->bindParam("stud_lastname", $json["stud_lastname"]);
     $stmt->bindParam("stud_scholarship_type_id", $json["stud_scholarship_type_id"]);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function addSchoolar_sub_type($json)
-
   {
     //{"stype_type_id":1, "stype_name":"bea", "stype_dutyhours_id":1}
     include "connection.php";
@@ -140,7 +118,6 @@ class User
     $stmt->bindParam("stype_type_id", $json["stype_type_id"]);
     $stmt->bindParam("stype_name", $json["stype_name"]);
     $stmt->bindParam("stype_dutyhours_id", $json["stype_dutyhours_id"]);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -162,7 +139,7 @@ class User
     include "connection.php";
     $json = json_decode($json, true);
     $sql = "INSERT INTO tbl_room(room_number)
-      VALUES(:room_number)";
+    VALUES(:room_number)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("room_number", $json["room_number"]);
     $stmt->execute();
@@ -174,15 +151,13 @@ class User
     include "connection.php";
     $json = json_decode($json, true);
     $sql = "INSERT INTO tbl_subject(subject_code, subject_name)
-      VALUES(:subject_code, :subject_name)";
+    VALUES(:subject_code, :subject_name)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("subject_code", $json["subject_code"]);
     $stmt->bindParam("subject_name", $json["subject_name"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
-
   function addOfficeMaster($json)
   {
     //{"off_subject":"bea", "off_descriptive_title": "bea", "off_section": "bea", "off_room": "bea", "off_type_id": 1, off_timeIn: 1, off_timeOut: 1, off_dayRemote: "wednesday", off_remoteTimeIn: 1, off_remoteTimeOut: 1}
@@ -202,7 +177,6 @@ class User
     $stmt->bindParam("off_dayRemote", $json["off_dayRemote"]);
     $stmt->bindParam("off_remoteTimeIn", $json["off_remoteTimeIn"]);
     $stmt->bindParam("off_remoteTimeOut", $json["off_remoteTimeOut"]);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -228,7 +202,6 @@ class User
     $stmt->bindParam("sup_supM_id", $json["sup_supM_id"]);
     $stmt->bindParam("sup_sy", $json["sup_sy"]);
     $stmt->bindParam("sup_sem", $json["sup_sem"]);
-
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -260,7 +233,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
-
   function getscholarship_type()
   {
     include "connection.php";
@@ -269,7 +241,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
-
   function getcourse()
   {
     include "connection.php";
@@ -278,7 +249,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
-
   function getscholarship_type_list()
   {
     include "connection.php";
@@ -295,7 +265,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
-
   function getschoolyear()
   {
     include "connection.php";
@@ -304,7 +273,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getScholar()
   {
     include "connection.php";
@@ -313,7 +281,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)) : 0;
   }
-
   function getSchoolYearLevel()
   {
     include "connection.php";
@@ -330,7 +297,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getsublist()
   {
     include "connection.php";
@@ -339,7 +305,6 @@ class User
     $returnValue["scholarshipType"] = $this->getscholarship_type();
     return json_encode($returnValue);
   }
-
   function getAddScholarDropDown()
   {
     include "connection.php";
@@ -349,10 +314,8 @@ class User
     $returnValue["scholarshipType"] = $this->getscholarship_type();
     $returnValue["scholarshipSub"] = $this->getSubType();
     $returnValue["modality"] = $this->getModality();
-
     return json_encode($returnValue);
   }
-
   function getadminList()
   {
     include "connection.php";
@@ -361,7 +324,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getCourseList()
   {
     include "connection.php";
@@ -370,7 +332,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getDepartment()
   {
     include "connection.php";
@@ -387,7 +348,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getSchoolYearList()
   {
     include "connection.php";
@@ -396,7 +356,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getOfficeMaster()
   {
     include "connection.php";
@@ -413,7 +372,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getScholarshipSubType()
   {
     include "connection.php";
@@ -422,7 +380,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getDays()
   {
     include "connection.php";
@@ -439,7 +396,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-
   function getRoom()
   {
     include "connection.php";
@@ -464,7 +420,60 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
+  // function login($json)
+  // {
+  //   include "connection.php";
+  //   $json = json_decode($json, true);
+  //   $sql = "SELECT a.adm_id, a.adm_name, a.adm_email, a.adm_password a.adm_user_level FROM tbladmin a
+  //           INNER JOIN tbluserlevel b ON a.adm_userLevel = b.userL_id
+  //           WHERE adm_email = :username AND BINARY adm_password = :password";
+  //   $stmt = $conn->prepare($sql);
+  //   $stmt->bindParam(':username', $json['username']);
+  //   $stmt->bindParam(':password', $json['password']);
+  //   $stmt->execute();
 
+  //   if ($stmt->rowCount() > 0) {
+  //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  //     return json_encode([
+  //       'adm_id' => $user['adm_id'],
+  //       'adm_user_level' => $user['adm_user_level'],
+  //       'adm_name' => $user['adm_name'],
+  //       'adm_email' => $user['adm_email']
+  //     ]);
+  //   }
+  //   $sql = "SELECT * FROM tblsupervisor_master WHERE supM_email = :username AND BINARY supM_password = :password";
+  //   $stmt = $conn->prepare($sql);
+  //   $stmt->bindParam(':username', $json['username']);
+  //   $stmt->bindParam(':password', $json['password']);
+  //   $stmt->execute();
+  //   if ($stmt->rowCount() > 0) {
+  //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  //     return json_encode([
+  //       'supM_id' => $user['supM_id'],
+  //       'sup_user_level' => $user['sup_user_level'],
+  //       'supM_name' => $user['supM_name'],
+  //       'supM_email' => $user['supM_email']
+  //     ]);
+  //   }
+  //   $sql = "SELECT a.*, b.* FROM tbl_scholars a
+
+  //   WHERE a.cand_email = :username AND BINARY a.cand_password = :password";
+  //   $stmt = $conn->prepare($sql);
+  //   $stmt->bindParam(':username', $json['username']);
+  //   $stmt->bindParam(':password', $json['password']);
+  //   $stmt->execute();
+  //   if ($stmt->rowCount() > 0) {
+  //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
+  //     return json_encode([
+  //       'cand_id' => $user['cand_id'],
+  //       'cand_firstname' => $user['cand_firstname'],
+  //       'cand_lastname' => $user['cand_lastname'],
+  //       'cand_email' => $user['cand_email'],
+  //       'cand_userLevel' => $user['cand_userLevel']
+  //     ]);
+  //   }
+  //   return json_encode(null);
+  // }
   function getDutyAssign()
   {
     include "connection.php";
@@ -476,8 +485,6 @@ class User
     $returnValue["getDutyHours"] = $this->getDutyHours();
     return json_encode($returnValue);
   }
-
-
   function getAllList()
   {
     include "connection.php";
@@ -493,7 +500,6 @@ class User
     $returnValue["scholarsubtype"] = $this->getScholarshipSubType();
     return json_encode($returnValue);
   }
-
   function getAllScholarList()
   {
     include "connection.php";
@@ -503,7 +509,6 @@ class User
     $returnValue["SchoolYearLevel"] = $this->getSchoolYearLevel();
     return json_encode($returnValue);
   }
-
   function updateAdmin($json)
   {
     //{"adm_employee_id":1, "adm_first_name":"bea","adm_last_name":"macario", "adm_password":"143llove", "adm_email": "beamacario@gmail.com", "adm_id":1}
@@ -520,7 +525,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function updateDerpartment($json)
   {
     //{"dep_name":"bea","dep_id":2}
@@ -533,8 +537,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
-
   function updateSchoolYear($json)
   {
     //{"sy_name":"bea","sy_id":2}
@@ -547,7 +549,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function updateCourse($json)
   {
     //{"crs_name":"bea","crs_dept_id":2, "crs_id":1}
@@ -563,7 +564,6 @@ class User
   }
   function updateScholarshipType($json)
   {
-
     include "connection.php";
     $data = json_decode($json, true);
     $sql = "UPDATE tbl_scholarship_type SET type_name = :type_name WHERE type_id = :type_id";
@@ -572,7 +572,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function updateOfficeMaster($json)
   {
     //{"off_name":"bea", "off_subject_code": "bea", "off_descriptive_title": "bea", off_section: "bea", "off_room": "bea", "off_type_id": 1, "off_timeIn": 1, "off_timeOut": 1, "off_dayRemote": "wednesday", "off_remoteTimeIn": 1, "off_remoteTimeOut": 1, "off_id": 1792}
@@ -597,7 +596,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function updateScholar($json)
   {
     //{"stud_school_id":1, "stud_password" :"beamell", "stud_last_name":"bea", "stud_first_name":"bea", "stud_year_level":1, "stud_scholarship_type_id":1, "stud_scholarship_sub_type_id":1, "stud_course_id":1, "stud_id":1}
@@ -623,11 +621,18 @@ class User
   {
     include "connection.php";
     $data = json_decode($json, true);
-    $sql = "UPDATE tbl_departments SET dept_status = 0 WHERE dept_id = :dept_id";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam(":dept_id", $data["dept_id"]);
-    $stmt->execute();
-    return $stmt->rowCount() > 0 ? 1 : 0;
+    try {
+      $sql = "DELETE FROM tbl_departments WHERE dept_id = :dept_id";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":dept_id", $data["dept_id"]);
+      $stmt->execute();
+      return $stmt->rowCount() > 0 ? 1 : 0;
+    } catch (PDOException $e) {
+      if ($e->getCode() == 23000) {
+        return -1;
+      }
+      throw $e;
+    }
   }
   function deleteSchoolYear($json)
   {
@@ -639,7 +644,6 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-
   function deleteCourse($json)
   {
     include "connection.php";
@@ -671,7 +675,6 @@ class User
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
 }
-
 function recordExists($value, $table, $column)
 {
   include "connection.php";
@@ -682,30 +685,25 @@ function recordExists($value, $table, $column)
   $count = $stmt->fetchColumn();
   return $count > 0;
 }
-
 $json = isset($_POST["json"]) ? $_POST["json"] : "0";
 $operation = isset($_POST["operation"]) ? $_POST["operation"] : "0";
-
 $user = new User();
-
 switch ($operation) {
-
+    // case "login":
+    //   echo $user->login($json);
+    //   break;
   case "addDepartment":
     echo $user->addDepartment($json);
     break;
-
   case "addSchoolyear":
     echo $user->addSchoolyear($json);
     break;
-
   case "addCourse":
     echo $user->addCourse($json);
     break;
-
   case "addScholarshipType":
     echo $user->addScholarshipType($json);
     break;
-
   case "AddScholar":
     echo $user->AddScholar($json);
     break;
