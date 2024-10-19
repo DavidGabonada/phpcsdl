@@ -5,15 +5,20 @@ class User
 {
   function addadministrator($json)
   {
+    //{"adm_employee_id":01122, "adm_first_name":"bea","adm_last_name":"macario", adm_middle_name:"S", "adm_password":"143llove", "adm_email": "beamacario@gmail.com", "adm_contact_number":"09123456789"}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_admin(adm_employee_id, adm_first_name, adm_last_name, adm_password, adm_email)
-    VALUES(1, :adm_first_name, :adm_last_name, :adm_password, :adm_email)";
+    $password = substr($json["adm_last_name"], 0, 2) . $json["adm_employee_id"];
+    $sql = "INSERT INTO tbl_admin(adm_employee_id, adm_last_name, adm_first_name, adm_middle_name, adm_password, adm_email, adm_contact_number)
+    VALUES(:adm_employee_id, :adm_last_name, :adm_first_name, :adm_middle_name, :adm_password, :adm_email, :adm_contact_number)";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam("adm_first_name", $json["adm_first_name"]);
+    $stmt->bindParam("adm_employee_id", $json["adm_employee_id"]);
     $stmt->bindParam("adm_last_name", $json["adm_last_name"]);
-    $stmt->bindParam("adm_password", $json["adm_password"]);
+    $stmt->bindParam("adm_first_name", $json["adm_first_name"]);
+    $stmt->bindParam("adm_middle_name", $json["adm_middle_name"]);
+    $stmt->bindParam("adm_password", $password);
     $stmt->bindParam("adm_email", $json["adm_email"]);
+    $stmt->bindParam("adm_contact_number", $json["adm_contact_number"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -92,6 +97,7 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
+
   function addAssignStudent($json)
   {
     //{stud_school_id":02-2021-03668,"stud_firstname":"joe","stud_lastname":"rogan","stud_scholarship_type_id":2}
@@ -225,6 +231,29 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
+  function AddAssignScholar($json)
+  {
+    //"assign_stud_id": "1", "assign_supM_id": "1", "assign_build_id": "1", "assign_day_id": "1", "assign_time_schedule_in": "1", "assign_time_schedule_out": "1", "assign_day_id": "1", "assign_room_id": "1", "assign_subject_id": "1", "assign_dutyH_Id": "1"}
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT INTO tbl_assign_scholars(assign_stud_id, assign_supM_id, assign_build_id, assign_day_id, assign_time_schedule_in, assign_time_schedule_out, assign_room_id, assign_subject_id, assign_dutyH_Id) 
+                                    VALUES (:assign_stud_id, :assign_supM_id, :assign_build_id, :assign_day_id, :assign_time_schedule_in, :assign_time_schedule_out, :assign_room_id, :assign_subject_id, :assign_dutyH_Id)";
+
+    $stmt = $conn->prepare($sql);
+
+    $stmt->bindParam(":assign_stud_id", $json["assign_stud_id"]);
+    $stmt->bindParam(":assign_supM_id", $json["assign_supM_id"]);
+    $stmt->bindParam(":assign_build_id", $json["assign_build_id"]);
+    $stmt->bindParam(":assign_day_id", $json["assign_day_id"]);
+    $stmt->bindParam(":assign_time_schedule_in", $json["assign_time_schedule_in"]);
+    $stmt->bindParam(":assign_time_schedule_out", $json["assign_time_schedule_out"]);
+    $stmt->bindParam(":assign_room_id", $json["assign_room_id"]);
+    $stmt->bindParam(":assign_subject_id", $json["assign_subject_id"]);
+    $stmt->bindParam(":assign_dutyH_Id", $json["assign_dutyH_Id"]);
+    $stmt->execute();
+
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
   function getAdmin()
   {
     include "connection.php";
@@ -279,7 +308,7 @@ class User
     $sql = "SELECT * FROM tbl_scholars";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
-    return $stmt->rowCount() > 0 ? json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)) : 0;
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
   function getSchoolYearLevel()
   {
@@ -293,6 +322,22 @@ class User
   {
     include "connection.php";
     $sql = "SELECT * FROM tbl_duty_hours";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+  function getTime()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_time_schedule";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+  function getTimeOut()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_time_schedule_out";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -420,6 +465,14 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
+  function getSupervisorMaster()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_supervisor_master";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
   // function login($json)
   // {
   //   include "connection.php";
@@ -478,11 +531,15 @@ class User
   {
     include "connection.php";
     $returnValue = [];
+    $returnValue["getScholar"] = $this->getScholar();
     $returnValue["getRoom"] = $this->getRoom();
     $returnValue["getBuilding"] = $this->getBuilding();
+    $returnValue["getSupervisorMaster"] = $this->getSupervisorMaster();
     $returnValue["getDays"] = $this->getDays();
     $returnValue["getSubject"] = $this->getSubject();
     $returnValue["getDutyHours"] = $this->getDutyHours();
+    $returnValue["getTimeIn"] = $this->getTime();
+    $returnValue["getTimeOut"] = $this->getTimeOut();
     return json_encode($returnValue);
   }
   function getAllList()
@@ -507,6 +564,14 @@ class User
     $returnValue["scholarshiptypelist"] = $this->getscholarship_type_list();
     $returnValue["courselist"] = $this->getCourseList();
     $returnValue["SchoolYearLevel"] = $this->getSchoolYearLevel();
+    return json_encode($returnValue);
+  }
+  function getTimeList()
+  {
+    include "connection.php";
+    $returnValue = [];
+    $returnValue["getTime"] = $this->getTime();
+    $returnValue["getTimeOut"] = $this->getTimeOut();
     return json_encode($returnValue);
   }
   function updateAdmin($json)
@@ -674,6 +739,235 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
+
+  function getStudentsDetailsAndStudentDutyAssign($json)
+  {
+    include "connection.php";
+    $json = json_decode($json, true);
+
+    // Updated SQL query to match the new structure
+    $sql = "SELECT 
+                  a.stud_school_id, 
+                  CONCAT(a.stud_first_name, ' ', a.stud_last_name) AS StudentFullname, 
+                  e.room_number, 
+                  f.build_name, 
+                  c.subject_code, 
+                  c.subject_name, 
+                  CONCAT(d.supM_first_name, ' ', d.supM_last_name) AS AdvisorFullname,
+                  CONCAT(g.timeShed_name, ' - ', h.time_out_name) AS DutyTime, 
+                  j.dutyH_hours, 
+                  i.day_name
+              FROM tbl_scholars AS a 
+              INNER JOIN tbl_assign_scholars AS b ON b.assign_stud_id = a.stud_id
+              INNER JOIN tbl_subject AS c ON c.subject_id = b.assign_subject_id
+              INNER JOIN tbl_supervisor_master AS d ON d.supM_id = b.assign_supM_id
+              INNER JOIN tbl_room AS e ON e.room_id = b.assign_room_id
+              INNER JOIN tbl_building AS f ON f.build_id = b.assign_build_id
+              INNER JOIN tbl_time_schedule AS g ON g.timeSched_id = b.assign_time_schedule_in
+              INNER JOIN tbl_time_schedule_out AS h ON h.time_out_id = b.assign_time_schedule_out
+              INNER JOIN tbl_duty_hours AS j ON j.dutyH_id = b.assign_dutyH_Id
+              INNER JOIN tbl_day AS i ON i.day_id = b.assign_day_id
+              WHERE b.assign_stud_id = :assign_stud_id";
+
+    // Prepare and execute the SQL query
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':assign_stud_id', $json['assign_stud_id']);
+    $stmt->execute();
+
+    // Fetch and return the result as JSON
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    return $result ? json_encode($result) : 0;
+  }
+
+  function getStudentDtr($json)
+  {
+    include "connection.php";
+    $json = json_decode($json, true);
+
+    $sql = "SELECT 
+                  dtr_date, 
+                  TIME(dtr_time_in) AS dtr_time_in, 
+                  TIME(dtr_time_out) AS dtr_time_out, 
+                  dtr_sy, 
+                  dtr_sem, 
+                  dutyH_hours, 
+                  TIMESTAMPDIFF(SECOND, dtr_time_in, dtr_time_out) AS total_seconds
+              FROM 
+                  tbl_dtr AS a 
+              INNER JOIN 
+                  tbl_assign_scholars AS b ON b.assign_id = a.dtr_assign_id
+              INNER JOIN 
+                  tbl_sy AS c ON c.sy_id = a.dtr_sy
+              INNER JOIN 
+                  tbl_semester AS d ON d.sem_id = a.dtr_sem
+              INNER JOIN 
+                  tbl_duty_hours AS e ON e.dutyH_id = b.assign_dutyH_Id
+              WHERE 
+                  b.assign_stud_id = :assign_stud_id";
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(':assign_stud_id', $json['assign_stud_id']);
+    $stmt->execute();
+
+    // Fetch all records
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Format the total_seconds into hours, minutes, and seconds
+    foreach ($result as &$row) {
+      $totalSeconds = $row['total_seconds'];
+      // Calculate hours, minutes, and seconds
+      $hours = floor($totalSeconds / 3600);
+      $minutes = floor(($totalSeconds % 3600) / 60);
+      $seconds = $totalSeconds % 60;
+
+      // Format the time as "HH:MM:SS" in 24-hour format
+      $row['dutyH_time'] = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
+    }
+
+    // Return as JSON: either the result or an empty array
+    return json_encode($result);
+  }
+
+
+
+
+
+
+  function studentsAttendance($json)
+  {
+    include "connection.php"; // Include your database connection
+    $json = json_decode($json, true); // Decode the JSON input
+    $scannedID = $json['stud_school_id']; // Get the student ID from the JSON input
+
+    // Get the current year and generate the school year string (e.g., "2024-2025")
+    $currentYear = date('Y');
+    $nextYear = $currentYear + 1;
+    $schoolYear = "$currentYear-$nextYear";
+
+    // Set the default semester
+    $semester = 1;
+
+    // Get the current date
+    $currentDate = date('Y-m-d');
+
+    // Query to check if the scanned ID exists and get duty_id and today's attendance record
+    $sql = "
+          SELECT stud_school_id, assign_id, dtr_time_in, dtr_time_out, dtr_id, dtr_date, dutyH_name
+          FROM tbl_scholars AS a 
+          INNER JOIN tbl_assign_scholars AS b ON b.assign_stud_id = a.stud_id
+          LEFT JOIN tbl_dtr AS c ON c.dtr_stud_id = a.stud_id AND c.dtr_date = :currentDate
+          INNER JOIN tbl_duty_hours AS d ON d.dutyH_id = b.assign_dutyH_Id
+          WHERE a.stud_school_id = :scannedID
+      ";
+
+    // Prepare the statement
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue(':scannedID', $scannedID, PDO::PARAM_STR);
+    $stmt->bindValue(':currentDate', $currentDate, PDO::PARAM_STR); // Bind current date
+    $stmt->execute();
+
+    // Fetch the result
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($result) {
+      $dutyAssignId = $result['assign_id']; // Get the duty assignment ID
+
+      // Check if a record exists for today
+      if (empty($result['dtr_id'])) {
+        // No record exists for today, insert a new attendance record
+        $sqlInsert = "
+                  INSERT INTO tbl_dtr 
+                      (dtr_assign_id, dtr_date, dtr_time_in, dtr_sy, dtr_sem) 
+                  VALUES 
+                      (:dtr_assign_id, CURDATE(), NOW(), :school_year, :semester)
+              ";
+
+        // Prepare the insert statement
+        $stmtInsert = $conn->prepare($sqlInsert);
+        $stmtInsert->bindValue(':dtr_assign_id', $dutyAssignId, PDO::PARAM_INT);
+        $stmtInsert->bindValue(':school_year', $schoolYear, PDO::PARAM_STR);
+        $stmtInsert->bindValue(':semester', $semester, PDO::PARAM_INT);
+
+        // Execute the insert query
+        $stmtInsert->execute();
+
+        // Check if the insert query succeeded
+        return $stmtInsert->rowCount() > 0 ? 1 : 0;
+      } else {
+        // If the record exists for today but is incomplete, update it
+        $dtrId = $result['dtr_id'];
+
+        if (empty($result['dtr_time_in'])) {
+          // Update to insert dtr_time_in if it's empty
+          $sqlUpdate = "
+                      UPDATE tbl_dtr 
+                      SET dtr_time_in = NOW() 
+                      WHERE dtr_id = :dtr_id
+                  ";
+        } else {
+          // Update to insert dtr_time_out if dtr_time_in exists
+          $sqlUpdate = "
+                      UPDATE tbl_dtr 
+                      SET dtr_time_out = NOW() 
+                      WHERE dtr_id = :dtr_id
+                  ";
+        }
+
+        // Prepare and execute the update statement
+        $stmtUpdate = $conn->prepare($sqlUpdate);
+        $stmtUpdate->bindValue(':dtr_id', $dtrId, PDO::PARAM_INT);
+        $stmtUpdate->execute();
+
+        // Check if the update query succeeded
+        if ($stmtUpdate->rowCount() > 0) {
+          // Now we need to check if both dtr_time_in and dtr_time_out are set for the record
+          $sqlCheckTime = "
+                      SELECT dtr_time_in, dtr_time_out 
+                      FROM tbl_dtr 
+                      WHERE dtr_id = :dtr_id
+                  ";
+
+          // Prepare and execute the check statement
+          $stmtCheckTime = $conn->prepare($sqlCheckTime);
+          $stmtCheckTime->bindValue(':dtr_id', $dtrId, PDO::PARAM_INT);
+          $stmtCheckTime->execute();
+          $timeResult = $stmtCheckTime->fetch(PDO::FETCH_ASSOC);
+
+          if ($timeResult && !empty($timeResult['dtr_time_in']) && !empty($timeResult['dtr_time_out'])) {
+            // Calculate total hours, minutes, and seconds worked
+            $timeIn = new DateTime($timeResult['dtr_time_in']);
+            $timeOut = new DateTime($timeResult['dtr_time_out']);
+            $interval = $timeIn->diff($timeOut);
+
+            // Convert the interval to total seconds worked
+            $totalWorkedSeconds = ($interval->h * 3600) + ($interval->i * 60) + $interval->s;
+
+            // Update the duty_hours in the tblduty_assign table
+            $sqlUpdateDutyHours = "
+                          UPDATE tblduty_assign 
+                          SET duty_hours = duty_hours - :worked_seconds
+                          WHERE duty_id = :duty_assign_id
+                      ";
+
+            // Prepare the update for duty hours
+            $stmtUpdateDutyHours = $conn->prepare($sqlUpdateDutyHours);
+            $stmtUpdateDutyHours->bindValue(':worked_seconds', $totalWorkedSeconds, PDO::PARAM_INT);
+            $stmtUpdateDutyHours->bindValue(':duty_assign_id', $dutyAssignId, PDO::PARAM_INT);
+            $stmtUpdateDutyHours->execute();
+
+            // Return 1 indicating success
+            return 1;
+          }
+
+          // If update succeeded but time calculation is not applicable
+          return 1;
+        }
+      }
+    }
+
+    // If the scanned ID is not found, return 0
+    return 0;
+  }
 }
 function recordExists($value, $table, $column)
 {
@@ -734,6 +1028,9 @@ switch ($operation) {
   case "AddSupervisor":
     echo $user->AddSupervisor($json);
     break;
+  case "AddAssignScholar":
+    echo $user->AddAssignScholar($json);
+    break;
   case "AddSupervisorMaster":
     echo $user->AddSupervisorMaster($json);
     break;
@@ -743,6 +1040,9 @@ switch ($operation) {
   case "getAdmin":
     echo json_encode($user->getAdmin());
     break;
+  case "getScholar":
+    echo json_encode($user->getScholar());
+    break;
   case "getscholarship_type":
     echo json_encode($user->getscholarship_type());
     break;
@@ -751,6 +1051,9 @@ switch ($operation) {
     break;
   case "getSupervisor":
     echo $user->getSupervisor();
+    break;
+  case "getSupervisorMaster":
+    echo json_encode($user->getSupervisorMaster());
     break;
   case "getScholarshipSubType":
     echo $user->getScholarshipSubType();
@@ -772,6 +1075,15 @@ switch ($operation) {
     break;
   case "getcourse":
     echo json_encode($user->getcourse());
+    break;
+  case "getTime":
+    echo json_encode($user->getTime());
+    break;
+  case "getTimeOut":
+    echo json_encode($user->getTimeOut());
+    break;
+  case "getTimeList":
+    echo $user->getTimeList();
     break;
   case "getSubType":
     echo $user->getSubType();
@@ -851,10 +1163,19 @@ switch ($operation) {
   case "deleteScholarshipSub":
     echo $user->deleteScholarshipSub($json);
     break;
-  case "deleteScholarshipType";
+  case "deleteScholarshipType":
     echo $user->deleteScholarshipType($json);
     break;
+  case "getStudentsDetailsAndStudentDutyAssign":
+    echo $user->getStudentsDetailsAndStudentDutyAssign($json);
+    break;
+  case "getStudentDtr":
+    echo $user->getStudentDtr($json);
+    break;
+  case "studentsAttendance":
+    echo $user->studentsAttendance($json);
+    break;
   default:
-    echo "WALAY " . $operation . " NGA OPERATION SA UBOS HAHHAHA BOBO NOYNAY";
+    echo "error";
     break;
 }
