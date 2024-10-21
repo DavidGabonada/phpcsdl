@@ -8,6 +8,7 @@ class User
     //{"adm_employee_id":01122, "adm_first_name":"bea","adm_last_name":"macario", adm_middle_name:"S", "adm_password":"143llove", "adm_email": "beamacario@gmail.com", "adm_contact_number":"09123456789"}
     include "connection.php";
     $json = json_decode($json, true);
+    $password = $json["adm_employee_id"] . substr($json["adm_last_name"], 0, 2);
     $password = substr($json["adm_last_name"], 0, 2) . $json["adm_employee_id"];
     $sql = "INSERT INTO tbl_admin(adm_employee_id, adm_last_name, adm_first_name, adm_middle_name, adm_password, adm_email, adm_contact_number)
     VALUES(:adm_employee_id, :adm_last_name, :adm_first_name, :adm_middle_name, :adm_password, :adm_email, :adm_contact_number)";
@@ -329,7 +330,7 @@ class User
   function getTime()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_time_schedule";
+    $sql = "SELECT * FROM tbl_time_schedule_in";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -468,7 +469,9 @@ class User
   function getSupervisorMaster()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_supervisor_master";
+    $sql = "SELECT a.supM_employee_id, a.supM_first_name, a.supM_middle_name, a.supM_last_name, b.dept_name, a.supM_email, a.supM_contact_number 
+    FROM tbl_supervisor_master a 
+    INNER JOIN tbl_departments b ON a.supM_department_id = b.dept_id;";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
