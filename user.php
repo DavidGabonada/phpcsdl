@@ -75,8 +75,10 @@ class User
         return 0;
     }
 
+
     function adminLogin($json)
     {
+        // {"username":"Manu.jabulan.coc@phinmaed.com","password":"Ja02-2021-03668"}
         include "connection.php";
         $json = json_decode($json, true);
         $sql = "SELECT * FROM tbl_admin WHERE BINARY adm_email = :username AND BINARY adm_password = :password";
@@ -89,6 +91,91 @@ class User
         }
         return 0;
     }
+
+    function updateImage($json)
+    {
+        try {
+            include "connection.php";
+            $json = json_decode($json, true);
+            $returnValueImage = $this->uploadImage();
+            switch ($returnValueImage) {
+                case 2:
+                    // You cannot Upload files of this type!
+                    return 2;
+                case 3:
+                    // There was an error uploading your file!
+                    return 3;
+                case 4:
+                    // Your file is too big (25mb maximum)
+                    return 4;
+                default:
+                    break;
+            }
+
+            $sql = "UPDATE tbl_admin SET adm_image = :image WHERE adm_id = :id";
+            $stmt = $conn->prepare($sql);
+            $stmt->bindParam("image", $returnValueImage);
+            $stmt->bindParam("id", $json["userId"]);
+            $stmt->execute();
+            return $stmt->rowCount() > 0 ? $returnValueImage : 0;
+        } catch (\Throwable $th) {
+            return $th;
+        }
+    }
+
+
+    function uploadImage()
+    {
+        if (isset($_FILES["file"])) {
+            $file = $_FILES['file'];
+            // print_r($file);
+            $fileName = $_FILES['file']['name'];
+            $fileTmpName = $_FILES['file']['tmp_name'];
+            $fileSize = $_FILES['file']['size'];
+            $fileError = $_FILES['file']['error'];
+            // $fileType = $_FILES['file']['type'];
+
+            $fileExt = explode(".", $fileName);
+            $fileActualExt = strtolower(end($fileExt));
+
+            $allowed = ["jpg", "jpeg", "png", "gif"];
+
+            if (in_array($fileActualExt, $allowed)) {
+                if ($fileError === 0) {
+                    if ($fileSize < 25000000) {
+                        $fileNameNew = uniqid("", true) . "." . $fileActualExt;
+                        $fileDestination =  'images/' . $fileNameNew;
+                        move_uploaded_file($fileTmpName, $fileDestination);
+                        return $fileNameNew;
+                    } else {
+                        return 4;
+                    }
+                } else {
+                    return 3;
+                }
+            } else {
+                return 2;
+            }
+        } else {
+            return "";
+        }
+
+        // $returnValueImage = uploadImage();
+
+        // switch ($returnValueImage) {
+        //     case 2:
+        //         // You cannot Upload files of this type!
+        //         return 2;
+        //     case 3:
+        //         // There was an error uploading your file!
+        //         return 3;
+        //     case 4:
+        //         // Your file is too big (25mb maximum)
+        //         return 4;
+        //     default:
+        //         break;
+        // }
+    }
 }
 $json = isset($_POST["json"]) ? $_POST["json"] : "0";
 $operation = isset($_POST["operation"]) ? $_POST["operation"] : "0";
@@ -99,6 +186,9 @@ switch ($operation) {
         break;
     case "adminLogin":
         echo json_encode($user->adminLogin($json));
+        break;
+    case "updateImage":
+        echo $user->updateImage($json);
         break;
         // case "getAdmin":
         //     echo $user->getAdmin();

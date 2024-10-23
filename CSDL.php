@@ -234,11 +234,11 @@ class User
   }
   function AddAssignScholar($json)
   {
-    //"assign_stud_id": "1", "assign_supM_id": "1", "assign_build_id": "1", "assign_day_id": "1", "assign_time_schedule_in": "1", "assign_time_schedule_out": "1", "assign_day_id": "1", "assign_room_id": "1", "assign_subject_id": "1", "assign_dutyH_Id": "1"}
+    //"assign_stud_id": "7", "assign_supM_id": "7", "assign_build_id": "2", "assign_day_id": "1", "assign_time_schedule_in": "3", "assign_time_schedule_out": "5", assign_room_id": "1", "assign_subject_id": "1", "assign_dutyH_Id": "1"}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_assign_scholars(assign_stud_id, assign_supM_id, assign_build_id, assign_day_id, assign_time_schedule_in, assign_time_schedule_out, assign_room_id, assign_subject_id, assign_dutyH_Id) 
-                                    VALUES (:assign_stud_id, :assign_supM_id, :assign_build_id, :assign_day_id, :assign_time_schedule_in, :assign_time_schedule_out, :assign_room_id, :assign_subject_id, :assign_dutyH_Id)";
+    $sql = "INSERT INTO tbl_assign_scholars(assign_stud_id, assign_supM_id, assign_build_id, assign_day_id, assign_time_schedule_in, assign_time_schedule_out, assign_room_id, assign_subject_id, assign_duty_hours) 
+    VALUES (:assign_stud_id, :assign_supM_id, :assign_build_id, :assign_day_id, :assign_time_schedule_in, :assign_time_schedule_out, :assign_room_id, :assign_subject_id, :assign_duty_hours)";
 
     $stmt = $conn->prepare($sql);
 
@@ -250,7 +250,7 @@ class User
     $stmt->bindParam(":assign_time_schedule_out", $json["assign_time_schedule_out"]);
     $stmt->bindParam(":assign_room_id", $json["assign_room_id"]);
     $stmt->bindParam(":assign_subject_id", $json["assign_subject_id"]);
-    $stmt->bindParam(":assign_dutyH_Id", $json["assign_dutyH_Id"]);
+    $stmt->bindParam(":assign_duty_hours", $json["assign_duty_hours"]);
     $stmt->execute();
 
     return $stmt->rowCount() > 0 ? 1 : 0;
@@ -469,7 +469,8 @@ class User
   function getSupervisorMaster()
   {
     include "connection.php";
-    $sql = "SELECT a.supM_employee_id, a.supM_first_name, a.supM_middle_name, a.supM_last_name, b.dept_name, a.supM_email, a.supM_contact_number 
+    $sql = "SELECT a.supM_id, 
+    a.supM_employee_id, a.supM_first_name, a.supM_middle_name, a.supM_last_name, b.dept_name, a.supM_email, a.supM_contact_number 
     FROM tbl_supervisor_master a 
     INNER JOIN tbl_departments b ON a.supM_department_id = b.dept_id;";
     $stmt = $conn->prepare($sql);
