@@ -142,13 +142,14 @@ class User
   }
   function AddRoom($json)
   {
-    //{"room_number":"103"}
+    //{"room_number":"103", "room_building_id":1}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_room(room_number)
-    VALUES(:room_number)";
+    $sql = "INSERT INTO tbl_room(room_number, room_building_id)
+    VALUES(:room_number, :room_building_id)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("room_number", $json["room_number"]);
+    $stmt->bindParam("room_building_id", $json["room_building_id"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -759,7 +760,7 @@ class User
                   c.subject_name, 
                   CONCAT(d.supM_first_name, ' ', d.supM_last_name) AS AdvisorFullname,
                   CONCAT(g.timeShed_name, ' - ', h.time_out_name) AS DutyTime, 
-                  j.dutyH_hours, 
+                  b.assign_duty_hours, 
                   i.day_name
               FROM tbl_scholars AS a 
               INNER JOIN tbl_assign_scholars AS b ON b.assign_stud_id = a.stud_id
@@ -767,9 +768,8 @@ class User
               INNER JOIN tbl_supervisor_master AS d ON d.supM_id = b.assign_supM_id
               INNER JOIN tbl_room AS e ON e.room_id = b.assign_room_id
               INNER JOIN tbl_building AS f ON f.build_id = b.assign_build_id
-              INNER JOIN tbl_time_schedule AS g ON g.timeSched_id = b.assign_time_schedule_in
+              INNER JOIN tbl_time_schedule_in AS g ON g.timeSched_id = b.assign_time_schedule_in
               INNER JOIN tbl_time_schedule_out AS h ON h.time_out_id = b.assign_time_schedule_out
-              INNER JOIN tbl_duty_hours AS j ON j.dutyH_id = b.assign_dutyH_Id
               INNER JOIN tbl_day AS i ON i.day_id = b.assign_day_id
               WHERE b.assign_stud_id = :assign_stud_id";
 
@@ -785,29 +785,30 @@ class User
 
   function getStudentDtr($json)
   {
-    include "connection.php";
-    $json = json_decode($json, true);
+    include "connection.php"; // Include your database connection
+    $json = json_decode($json, true); // Decode the JSON input
 
-    $sql = "SELECT 
-                  dtr_date, 
-                  TIME(dtr_time_in) AS dtr_time_in, 
-                  TIME(dtr_time_out) AS dtr_time_out, 
-                  dtr_sy, 
-                  dtr_sem, 
-                  dutyH_hours, 
-                  TIMESTAMPDIFF(SECOND, dtr_time_in, dtr_time_out) AS total_seconds
-              FROM 
-                  tbl_dtr AS a 
-              INNER JOIN 
-                  tbl_assign_scholars AS b ON b.assign_id = a.dtr_assign_id
-              INNER JOIN 
-                  tbl_sy AS c ON c.sy_id = a.dtr_sy
-              INNER JOIN 
-                  tbl_semester AS d ON d.sem_id = a.dtr_sem
-              INNER JOIN 
-                  tbl_duty_hours AS e ON e.dutyH_id = b.assign_dutyH_Id
-              WHERE 
-                  b.assign_stud_id = :assign_stud_id";
+    // SQL query to fetch attendance records
+    $sql = "
+          SELECT 
+              dtr_date, 
+              TIME(dtr_time_in) AS dtr_time_in, 
+              TIME(dtr_time_out) AS dtr_time_out, 
+              dtr_school_year, 
+              dtr_semester, 
+              assign_duty_hours, 
+              TIMESTAMPDIFF(SECOND, dtr_time_in, dtr_time_out) AS total_seconds
+          FROM 
+              tbl_dtr AS a 
+          INNER JOIN 
+              tbl_assign_scholars AS b ON b.assign_id = a.dtr_assign_id
+          INNER JOIN 
+              tbl_sy AS c ON c.sy_id = a.dtr_school_year
+          INNER JOIN 
+              tbl_semester AS d ON d.sem_id = a.dtr_semester
+          WHERE 
+              b.assign_stud_id = :assign_stud_id
+      ";
 
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':assign_stud_id', $json['assign_stud_id']);
@@ -828,13 +829,9 @@ class User
       $row['dutyH_time'] = sprintf('%02d:%02d:%02d', $hours, $minutes, $seconds);
     }
 
-    // Return as JSON: either the result or an empty array
+    // Return as JSON
     return json_encode($result);
   }
-
-
-
-
 
 
   function studentsAttendance($json)
@@ -843,7 +840,7 @@ class User
     $json = json_decode($json, true); // Decode the JSON input
     $scannedID = $json['stud_school_id']; // Get the student ID from the JSON input
 
-    // Get the current year and generate the school year string (e.g., "2024-2025")
+    // Get the current year and generate school year string (e.g., "2024-2025")
     $currentYear = date('Y');
     $nextYear = $currentYear + 1;
     $schoolYear = "$currentYear-$nextYear";
@@ -854,15 +851,20 @@ class User
     // Get the current date
     $currentDate = date('Y-m-d');
 
-    // Query to check if the scanned ID exists and get duty_id and today's attendance record
+    // Query to check if the scanned ID exists and get today's attendance record
     $sql = "
-          SELECT stud_school_id, assign_id, dtr_time_in, dtr_time_out, dtr_id, dtr_date, dutyH_name
-          FROM tbl_scholars AS a 
-          INNER JOIN tbl_assign_scholars AS b ON b.assign_stud_id = a.stud_id
-          LEFT JOIN tbl_dtr AS c ON c.dtr_stud_id = a.stud_id AND c.dtr_date = :currentDate
-          INNER JOIN tbl_duty_hours AS d ON d.dutyH_id = b.assign_dutyH_Id
-          WHERE a.stud_school_id = :scannedID
-      ";
+              SELECT 
+                  a.stud_school_id, 
+                  b.assign_id, 
+                  b.assign_duty_hours, 
+                  c.dtr_time_in, 
+                  c.dtr_time_out, 
+                  c.dtr_id
+              FROM tbl_scholars AS a
+              INNER JOIN tbl_assign_scholars AS b ON b.assign_stud_id = a.stud_id
+              LEFT JOIN tbl_dtr AS c ON c.dtr_stud_id = a.stud_id AND c.dtr_date = :currentDate
+              WHERE a.stud_school_id = :scannedID
+          ";
 
     // Prepare the statement
     $stmt = $conn->prepare($sql);
@@ -873,104 +875,102 @@ class User
     // Fetch the result
     $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
+    // If the student is found
     if ($result) {
-      $dutyAssignId = $result['assign_id']; // Get the duty assignment ID
+      $dtrId = $result['dtr_id']; // Get the DTR ID
+      $dtrTimeIn = $result['dtr_time_in'];
+      $dtrTimeOut = $result['dtr_time_out'];
+      $dutyAssignId = $result['assign_id']; // Get the assign ID
+      $assignDutyHours = $result['assign_duty_hours']; // Get the assigned duty hours in seconds
 
-      // Check if a record exists for today
-      if (empty($result['dtr_id'])) {
-        // No record exists for today, insert a new attendance record
+      // If no record for today, insert a new attendance record
+      if (empty($dtrId)) {
         $sqlInsert = "
                   INSERT INTO tbl_dtr 
-                      (dtr_assign_id, dtr_date, dtr_time_in, dtr_sy, dtr_sem) 
+                  (dtr_stud_id, dtr_date, dtr_time_in, dtr_school_year, dtr_semester, dtr_assign_id) 
                   VALUES 
-                      (:dtr_assign_id, CURDATE(), NOW(), :school_year, :semester)
+                  ((SELECT stud_id FROM tbl_scholars WHERE stud_school_id = :scannedID), CURDATE(), NOW(), :school_year, :semester, :duty_assign_id)
               ";
 
-        // Prepare the insert statement
+        // Prepare and execute the insert statement
         $stmtInsert = $conn->prepare($sqlInsert);
-        $stmtInsert->bindValue(':dtr_assign_id', $dutyAssignId, PDO::PARAM_INT);
+        $stmtInsert->bindValue(':scannedID', $scannedID, PDO::PARAM_STR);
         $stmtInsert->bindValue(':school_year', $schoolYear, PDO::PARAM_STR);
         $stmtInsert->bindValue(':semester', $semester, PDO::PARAM_INT);
+        $stmtInsert->bindValue(':duty_assign_id', $dutyAssignId, PDO::PARAM_INT); // Bind foreign key
 
-        // Execute the insert query
-        $stmtInsert->execute();
-
-        // Check if the insert query succeeded
-        return $stmtInsert->rowCount() > 0 ? 1 : 0;
-      } else {
-        // If the record exists for today but is incomplete, update it
-        $dtrId = $result['dtr_id'];
-
-        if (empty($result['dtr_time_in'])) {
-          // Update to insert dtr_time_in if it's empty
-          $sqlUpdate = "
-                      UPDATE tbl_dtr 
-                      SET dtr_time_in = NOW() 
-                      WHERE dtr_id = :dtr_id
-                  ";
+        if ($stmtInsert->execute()) {
+          return 1; // Success
         } else {
-          // Update to insert dtr_time_out if dtr_time_in exists
-          $sqlUpdate = "
-                      UPDATE tbl_dtr 
-                      SET dtr_time_out = NOW() 
-                      WHERE dtr_id = :dtr_id
-                  ";
+          return 0; // Failure
         }
+      } else {
+        // If a record exists for today
+        if (empty($dtrTimeIn)) {
+          // Update to insert dtr_time_in if it's empty
+          $sqlUpdate = "UPDATE tbl_dtr SET dtr_time_in = NOW() WHERE dtr_id = :dtr_id";
+        } elseif (empty($dtrTimeOut)) {
+          // If already checked in, allow the user to check out and calculate hours worked
+          $sqlUpdate = "UPDATE tbl_dtr SET dtr_time_out = NOW() WHERE dtr_id = :dtr_id";
 
-        // Prepare and execute the update statement
-        $stmtUpdate = $conn->prepare($sqlUpdate);
-        $stmtUpdate->bindValue(':dtr_id', $dtrId, PDO::PARAM_INT);
-        $stmtUpdate->execute();
+          // Prepare and execute the update statement
+          $stmtUpdate = $conn->prepare($sqlUpdate);
+          $stmtUpdate->bindValue(':dtr_id', $dtrId, PDO::PARAM_INT);
 
-        // Check if the update query succeeded
-        if ($stmtUpdate->rowCount() > 0) {
-          // Now we need to check if both dtr_time_in and dtr_time_out are set for the record
-          $sqlCheckTime = "
-                      SELECT dtr_time_in, dtr_time_out 
-                      FROM tbl_dtr 
-                      WHERE dtr_id = :dtr_id
-                  ";
+          if ($stmtUpdate->execute()) {
+            // Calculate the time difference in seconds between time in and time out
+            $sqlTimeDiff = "SELECT TIMESTAMPDIFF(SECOND, dtr_time_in, dtr_time_out) AS time_worked FROM tbl_dtr WHERE dtr_id = :dtr_id";
+            $stmtTimeDiff = $conn->prepare($sqlTimeDiff);
+            $stmtTimeDiff->bindValue(':dtr_id', $dtrId, PDO::PARAM_INT);
+            $stmtTimeDiff->execute();
+            $timeWorked = $stmtTimeDiff->fetchColumn(); // Time worked in seconds
 
-          // Prepare and execute the check statement
-          $stmtCheckTime = $conn->prepare($sqlCheckTime);
-          $stmtCheckTime->bindValue(':dtr_id', $dtrId, PDO::PARAM_INT);
-          $stmtCheckTime->execute();
-          $timeResult = $stmtCheckTime->fetch(PDO::FETCH_ASSOC);
+            // Deduct the time worked from the assigned duty hours
+            $remainingDutyHours = $assignDutyHours - $timeWorked;
 
-          if ($timeResult && !empty($timeResult['dtr_time_in']) && !empty($timeResult['dtr_time_out'])) {
-            // Calculate total hours, minutes, and seconds worked
-            $timeIn = new DateTime($timeResult['dtr_time_in']);
-            $timeOut = new DateTime($timeResult['dtr_time_out']);
-            $interval = $timeIn->diff($timeOut);
-
-            // Convert the interval to total seconds worked
-            $totalWorkedSeconds = ($interval->h * 3600) + ($interval->i * 60) + $interval->s;
-
-            // Update the duty_hours in the tblduty_assign table
-            $sqlUpdateDutyHours = "
-                          UPDATE tblduty_assign 
-                          SET duty_hours = duty_hours - :worked_seconds
-                          WHERE duty_id = :duty_assign_id
-                      ";
-
-            // Prepare the update for duty hours
+            // Update the remaining duty hours in the assignment table
+            $sqlUpdateDutyHours = "UPDATE tbl_assign_scholars SET assign_duty_hours = :remainingDutyHours WHERE assign_id = :duty_assign_id";
             $stmtUpdateDutyHours = $conn->prepare($sqlUpdateDutyHours);
-            $stmtUpdateDutyHours->bindValue(':worked_seconds', $totalWorkedSeconds, PDO::PARAM_INT);
+            $stmtUpdateDutyHours->bindValue(':remainingDutyHours', $remainingDutyHours, PDO::PARAM_INT);
             $stmtUpdateDutyHours->bindValue(':duty_assign_id', $dutyAssignId, PDO::PARAM_INT);
-            $stmtUpdateDutyHours->execute();
 
-            // Return 1 indicating success
-            return 1;
+            if ($stmtUpdateDutyHours->execute()) {
+              return 1; // Success if duty hours updated
+            } else {
+              return 0; // Failure to update duty hours
+            }
+          } else {
+            return 0; // Update failed
           }
-
-          // If update succeeded but time calculation is not applicable
-          return 1;
+        } else {
+          // Both times are filled, return an error
+          return 0; // Attendance already marked for today.
         }
       }
+    } else {
+      // If the student is not found
+      return 0; // No attendance record found
     }
+  }
 
-    // If the scanned ID is not found, return 0
-    return 0;
+
+
+  function getAssignedScholars($json)
+  {
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "SELECT stud_school_id, CONCAT(stud_last_name, ' ' , stud_first_name) AS Fullname, stud_contact_number, stud_email, room_number, build_name, subject_code, subject_name, assign_duty_hours
+            FROM tbl_scholars AS a 
+            INNER JOIN tbl_assign_scholars AS b ON b.assign_stud_id = a.stud_id
+            INNER JOIN tbl_room AS c ON c.room_id = b.assign_room_id
+            INNER JOIN tbl_building AS d ON d.build_id = b.assign_build_id
+            INNER JOIN tbl_subject AS e ON e.subject_id = b.assign_subject_id
+            WHERE b.assign_supM_id = :assign_supM_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":assign_supM_id", $json['assign_supM_id']);
+    $stmt->execute();
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return json_encode($result);
   }
 }
 function recordExists($value, $table, $column)
@@ -1178,6 +1178,9 @@ switch ($operation) {
     break;
   case "studentsAttendance":
     echo $user->studentsAttendance($json);
+    break;
+  case "getAssignedScholars":
+    echo $user->getAssignedScholars($json);
     break;
   default:
     echo "error";

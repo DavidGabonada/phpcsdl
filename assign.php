@@ -156,6 +156,19 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
     }
+    function getAssignmentList()
+    {
+        include "connection.php";
+        $sql = "SELECT CONCAT(a.stud_first_name, ' ' , a.stud_last_name) AS Fullname, CONCAT(c.supM_first_name, ' ', c.supM_last_name) AS SupervisorFullname, b.assign_duty_hours, d.timeShed_name, e.time_out_name 
+        FROM tbl_scholars a 
+        INNER JOIN tbl_assign_scholars b ON b.assign_stud_id = a.stud_id
+        INNER JOIN tbl_supervisor_master c ON c.supM_id = b.assign_supM_id
+        INNER JOIN tbl_time_schedule_in d ON d.timeSched_id = b.assign_time_schedule_in
+        INNER JOIN tbl_time_schedule_out e ON e.time_out_id = b.assign_time_schedule_out";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    }
 }
 $json = isset($_POST["json"]) ? $_POST["json"] : "0";
 $operation = isset($_POST["operation"]) ? $_POST["operation"] : "0";
@@ -193,6 +206,9 @@ switch ($operation) {
         break;
     case "getScholarList":
         echo $user->getScholarList();
+        break;
+    case "getAssignmentList":
+        echo json_encode($user->getAssignmentList());
         break;
     default:
         echo "WALAY " . $operation . " NGA OPERATION SA UBOS HAHHAHA BOBO NOYNAY";
