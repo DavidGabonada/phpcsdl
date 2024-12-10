@@ -138,7 +138,7 @@ class User
             $fileExt = explode(".", $fileName);
             $fileActualExt = strtolower(end($fileExt));
 
-            $allowed = ["jpg", "jpeg", "png", "gif"];
+            $allowed = ["jpg", "jpeg", "png", "gif", "webp"];
 
             if (in_array($fileActualExt, $allowed)) {
                 if ($fileError === 0) {

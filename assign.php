@@ -169,6 +169,17 @@ class User
         $stmt->execute();
         return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
     }
+
+    function getListScholar()
+    {
+        include "connection.php";
+        $sql = "SELECT CONCAT(a.stud_first_name, ' ' ,  a.stud_last_name) AS Fullname, b.type_name
+        FROM tbl_scholars a
+        INNER JOIN tbl_scholarship_type b ON b.type_id = a.stud_scholarship_type_id";
+        $stmt = $conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+    }
 }
 $json = isset($_POST["json"]) ? $_POST["json"] : "0";
 $operation = isset($_POST["operation"]) ? $_POST["operation"] : "0";
@@ -209,6 +220,9 @@ switch ($operation) {
         break;
     case "getAssignmentList":
         echo json_encode($user->getAssignmentList());
+        break;
+    case "getListScholar":
+        echo json_encode($user->getListScholar());
         break;
     default:
         echo "WALAY " . $operation . " NGA OPERATION SA UBOS HAHHAHA BOBO NOYNAY";
