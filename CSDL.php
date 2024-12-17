@@ -73,40 +73,101 @@ class User
   }
   function AddScholar($json)
   {
-    // {"stud_school_id":"02-2223-08904", "stud_last_name" :"Ignalig", "stud_first_name":"Kitty", "stud_middle_name":"Tanhaga-Doble", "stud_course_id":1,"stud_year_level":3, "stud_scholarship_type_id":9, "stud_scholarship_sub_type_id":1,"stud_contact_number":"0991234533","stud_email":"xenamylove@gmail.com"}
     include "connection.php";
-    $json = json_decode($json, true);
-    $password = substr($json["stud_last_name"], 0, 2) . $json["stud_school_id"];
-    $sql = "INSERT INTO tbl_scholars (
-    stud_id, stud_academic_session_id, stud_name, stud_scholarship_id, stud_department_id, stud_course, stud_year_id, stud_status_id, stud_percent_id, stud_amount, stud_applied_on_tuition, 
-    stud_applied_on_misc, stud_date, stud_modified_by, stud_modified_date, stud_image_filename, stud_contactNumber, stud_email, stud_qrCode)
-    VALUES(:stud_id, :stud_academic_session_id, :stud_name, :stud_scholarship_id, :stud_department_id, :stud_course, :stud_year_id, :stud_status_id, :stud_percent_id, :stud_amount, :stud_applied_on_tuition, 
-    :stud_applied_on_misc, :stud_date, :stud_modified_by, :stud_modified_date, :stud_image_filename, :stud_contactNumber, :stud_email, :stud_qrCode)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam("stud_id", $json["stud_school_id"]);
-    $stmt->bindParam("stud_academic_session_id", $json["stud_academic_session_id"]);
-    $stmt->bindParam("stud_name", $json["stud_name"]);
-    $stmt->bindParam("stud_scholarship_id", $json["stud_scholarship_type_id"]);
-    $stmt->bindParam("stud_department_id", $json["stud_department_id"]);
-    $stmt->bindParam("stud_course", $json["stud_course_id"]);
-    $stmt->bindParam("stud_year_id", $json["stud_year_level"]);
-    $stmt->bindParam("stud_status_id", $json["stud_status_id"]);
-    $stmt->bindParam("stud_percent_id", $json["stud_percent_id"]);
-    $stmt->bindParam("stud_amount", $json["stud_amount"]);
-    $stmt->bindParam("stud_applied_on_tuition", $json["stud_applied_on_tuition"]);
-    $stmt->bindParam("stud_applied_on_misc", $json["stud_applied_on_misc"]);
-    $stmt->bindParam("stud_date", $json["stud_date"]);
-    $stmt->bindParam("stud_modified_by", $json["stud_modified_by"]);
-    $stmt->bindParam("stud_modified_date", $json["stud_modified_date"]);
-    $stmt->bindParam("stud_image_filename", $json["stud_image_filename"]);
-    $stmt->bindParam("stud_contactNumber", $json["stud_contact_number"]);
-    $stmt->bindParam("stud_email", $json["stud_email"]);
-    $stmt->bindParam("stud_qrCode", $json["stud_qrCode"]);
+
+    try {
+      // Decode the JSON input
+      $data = json_decode($json, true);
+
+      // Validate required fields
+      if (
+        empty($data["stud_id"]) ||
+        empty($data["stud_academic_session_id"]) ||
+        empty($data["stud_name"]) ||
+        empty($data["stud_scholarship_id"])
+      ) {
+        throw new Exception("Missing required fields.");
+      }
 
 
-    $stmt->execute();
-    return $stmt->rowCount() > 0 ? 1 : 0;
+      $password = substr($data["stud_name"], 0, 2) . $data["stud_id"];
+
+      $sql = "INSERT INTO tbl_scholars (
+              stud_id, 
+              stud_academic_session_id, 
+              stud_name, 
+              stud_scholarship_id, 
+              stud_department_id, 
+              stud_course_id, 
+              stud_year_id, 
+              stud_status_id, 
+              stud_percent_id, 
+              stud_amount, 
+              stud_applied_on_tuition, 
+              stud_applied_on_misc, 
+              stud_date, 
+              stud_modified_by, 
+              stud_modified_date, 
+              stud_image_filename, 
+              stud_contactNumber, 
+              stud_email, 
+              stud_qrCode
+          ) VALUES (
+              :stud_id, 
+              :stud_academic_session_id, 
+              :stud_name, 
+              :stud_scholarship_id, 
+              :stud_department_id, 
+              :stud_course_id, 
+              :stud_year_id, 
+              :stud_status_id, 
+              :stud_percent_id, 
+              :stud_amount, 
+              :stud_applied_on_tuition, 
+              :stud_applied_on_misc, 
+              :stud_date, 
+              :stud_modified_by, 
+              :stud_modified_date, 
+              :stud_image_filename, 
+              :stud_contactNumber, 
+              :stud_email, 
+              :stud_qrCode
+          )";
+
+      // Prepare and bind parameters
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":stud_id", $data["stud_id"]);
+      $stmt->bindParam(":stud_academic_session_id", $data["stud_academic_session_id"]);
+      $stmt->bindParam(":stud_name", $data["stud_name"]);
+      $stmt->bindParam(":stud_scholarship_id", $data["stud_scholarship_id"]);
+      $stmt->bindParam(":stud_department_id", $data["stud_department_id"]);
+      $stmt->bindParam(":stud_course_id", $data["stud_course_id"]);
+      $stmt->bindParam(":stud_year_id", $data["stud_year_id"]);
+      $stmt->bindParam(":stud_status_id", $data["stud_status_id"]);
+      $stmt->bindParam(":stud_percent_id", $data["stud_percent_id"]);
+      $stmt->bindParam(":stud_amount", $data["stud_amount"]);
+      $stmt->bindParam(":stud_applied_on_tuition", $data["stud_applied_on_tuition"]);
+      $stmt->bindParam(":stud_applied_on_misc", $data["stud_applied_on_misc"]);
+      $stmt->bindParam(":stud_date", $data["stud_date"]);
+      $stmt->bindParam(":stud_modified_by", $data["stud_modified_by"]);
+      $stmt->bindParam(":stud_modified_date", $data["stud_modified_date"]);
+      $stmt->bindParam(":stud_image_filename", $data["stud_image_filename"]);
+      $stmt->bindParam(":stud_contactNumber", $data["stud_contactNumber"]);
+      $stmt->bindParam(":stud_email", $data["stud_email"]);
+      $stmt->bindParam(":stud_qrCode", $data["stud_qrCode"]);
+
+      // Execute the query
+      $stmt->execute();
+
+      // Return success or failure
+      return $stmt->rowCount() > 0 ? 1 : 0;
+    } catch (Exception $e) {
+      // Handle exceptions
+      error_log("Error in AddScholar: " . $e->getMessage());
+      return 0;
+    }
   }
+
 
   function addAssignStudent($json)
   {
@@ -247,7 +308,7 @@ class User
     //{"supM_employee_id": "1", "supM_first_name": "david", "supM_last_name": "gabonada", "supM_middle_name": "candelasa", "supM_department_id": "4", "supM_email": "gabonada@gmail", "supM_contact_number": "02221"}
     include "connection.php";
     $json = json_decode($json, true);
-    $password = $json["supM_employee_id"] . substr($json["supM_last_name"], 0, 2);
+    $password = $json["supM_name"];
     $sql = "INSERT INTO tbl_supervisors_master(supM_name, supM_password, supM_email, supM_image_filename)
     VALUES (:supM_name, :supM_password, :supM_email, :supM_image_filename)";
     $stmt = $conn->prepare($sql);
