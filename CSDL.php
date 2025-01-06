@@ -36,6 +36,7 @@ class User
   }
   function addSchoolyear($json)
   {
+    //
     include "connection.php";
     $json = json_decode($json, true);
     $sql = "INSERT INTO tbl_year(year_name)
@@ -48,6 +49,7 @@ class User
   }
   function addCourse($json)
   {
+    //{"course_name":"bea", "couse_dept_id":1}
     include "connection.php";
     $json = json_decode($json, true);
     $sql = "INSERT INTO tbl_course(course_name, course_dept_id)
@@ -74,99 +76,62 @@ class User
   function AddScholar($json)
   {
     include "connection.php";
+    $students = json_decode($json, true);
 
-    try {
-      // Decode the JSON input
-      $data = json_decode($json, true);
+    // Correct SQL query
+    $sql = "INSERT INTO tbl_scholars(
+          stud_id, stud_academic_session_id, stud_name, stud_scholarship_id, 
+          stud_department_id, stud_course_id, stud_year_id, stud_status_id, 
+          stud_percent_id, stud_amount, stud_applied_on_tuition, stud_applied_on_misc, 
+          stud_date, stud_modified_by, stud_modified_date, stud_password, 
+          stud_image_filename, stud_contactNumber, stud_email
+      ) VALUES (
+          :stud_id, :stud_academic_session_id, :stud_name, :stud_scholarship_id, 
+          :stud_department_id, :stud_course_id, :stud_year_id, :stud_status_id, 
+          :stud_percent_id, :stud_amount, :stud_applied_on_tuition, :stud_applied_on_misc, 
+          :stud_date, :stud_modified_by, :stud_modified_date, :stud_password, 
+          :stud_image_filename, :stud_contactNumber, :stud_email
+      )";
 
-      // Validate required fields
-      if (
-        empty($data["stud_id"]) ||
-        empty($data["stud_academic_session_id"]) ||
-        empty($data["stud_name"]) ||
-        empty($data["stud_scholarship_id"])
-      ) {
-        throw new Exception("Missing required fields.");
+    // Prepare statement
+    $stmt = $conn->prepare($sql);
+
+    foreach ($students as $student) {
+      try {
+        // Generate password
+        $password = $student["stud_id"] . "123";
+        // Bind parameters
+        $stmt->bindParam(":stud_id", $student["stud_id"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_academic_session_id", $student["stud_academic_session_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_name", $student["stud_name"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_scholarship_id", $student["stud_scholarship_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_department_id", $student["stud_department_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_course_id", $student["stud_course_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_year_id", $student["stud_year_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_status_id", $student["stud_status_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_percent_id", $student["stud_percent_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_amount", $student["stud_amount"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_applied_on_tuition", $student["stud_applied_on_tuition"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_applied_on_misc", $student["stud_applied_on_misc"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_date", $student["stud_date"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_modified_by", $student["stud_modified_by"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_modified_date", $student["stud_modified_date"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_password", $password, PDO::PARAM_STR);
+        $stmt->bindParam(":stud_image_filename", $student["stud_image_filename"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_contactNumber", $student["stud_contactNumber"], PDO::PARAM_STR);
+        $stmt->bindParam(":stud_email", $student["stud_email"], PDO::PARAM_STR);
+
+        // Execute statement
+        $stmt->execute();
+      } catch (Exception $e) {
+        return 0;
       }
-
-
-      $password = substr($data["stud_name"], 0, 2) . $data["stud_id"];
-
-      $sql = "INSERT INTO tbl_scholars (
-              stud_id, 
-              stud_academic_session_id, 
-              stud_name, 
-              stud_scholarship_id, 
-              stud_department_id, 
-              stud_course_id, 
-              stud_year_id, 
-              stud_status_id, 
-              stud_percent_id, 
-              stud_amount, 
-              stud_applied_on_tuition, 
-              stud_applied_on_misc, 
-              stud_date, 
-              stud_modified_by, 
-              stud_modified_date, 
-              stud_image_filename, 
-              stud_contactNumber, 
-              stud_email, 
-              stud_qrCode
-          ) VALUES (
-              :stud_id, 
-              :stud_academic_session_id, 
-              :stud_name, 
-              :stud_scholarship_id, 
-              :stud_department_id, 
-              :stud_course_id, 
-              :stud_year_id, 
-              :stud_status_id, 
-              :stud_percent_id, 
-              :stud_amount, 
-              :stud_applied_on_tuition, 
-              :stud_applied_on_misc, 
-              :stud_date, 
-              :stud_modified_by, 
-              :stud_modified_date, 
-              :stud_image_filename, 
-              :stud_contactNumber, 
-              :stud_email, 
-              :stud_qrCode
-          )";
-
-      // Prepare and bind parameters
-      $stmt = $conn->prepare($sql);
-      $stmt->bindParam(":stud_id", $data["stud_id"]);
-      $stmt->bindParam(":stud_academic_session_id", $data["stud_academic_session_id"]);
-      $stmt->bindParam(":stud_name", $data["stud_name"]);
-      $stmt->bindParam(":stud_scholarship_id", $data["stud_scholarship_id"]);
-      $stmt->bindParam(":stud_department_id", $data["stud_department_id"]);
-      $stmt->bindParam(":stud_course_id", $data["stud_course_id"]);
-      $stmt->bindParam(":stud_year_id", $data["stud_year_id"]);
-      $stmt->bindParam(":stud_status_id", $data["stud_status_id"]);
-      $stmt->bindParam(":stud_percent_id", $data["stud_percent_id"]);
-      $stmt->bindParam(":stud_amount", $data["stud_amount"]);
-      $stmt->bindParam(":stud_applied_on_tuition", $data["stud_applied_on_tuition"]);
-      $stmt->bindParam(":stud_applied_on_misc", $data["stud_applied_on_misc"]);
-      $stmt->bindParam(":stud_date", $data["stud_date"]);
-      $stmt->bindParam(":stud_modified_by", $data["stud_modified_by"]);
-      $stmt->bindParam(":stud_modified_date", $data["stud_modified_date"]);
-      $stmt->bindParam(":stud_image_filename", $data["stud_image_filename"]);
-      $stmt->bindParam(":stud_contactNumber", $data["stud_contactNumber"]);
-      $stmt->bindParam(":stud_email", $data["stud_email"]);
-      $stmt->bindParam(":stud_qrCode", $data["stud_qrCode"]);
-
-      // Execute the query
-      $stmt->execute();
-
-      // Return success or failure
-      return $stmt->rowCount() > 0 ? 1 : 0;
-    } catch (Exception $e) {
-      // Handle exceptions
-      error_log("Error in AddScholar: " . $e->getMessage());
-      return 0;
     }
+
+    return 1;
   }
+
+
 
 
   function addAssignStudent($json)
@@ -362,7 +327,7 @@ class User
   function getcourse()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_course WHERE crs_status = 1";
+    $sql = "SELECT * FROM tbl_course";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
@@ -386,7 +351,7 @@ class User
   function getschoolyear()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_sy WHERE sy_status = 1";
+    $sql = "SELECT * FROM tbl_year";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -469,7 +434,7 @@ class User
   function getDepartment()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_departments WHERE dept_status = 1";
+    $sql = "SELECT * FROM tbl_department";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? json_encode($stmt->fetchAll(PDO::FETCH_ASSOC)) : 0;
@@ -562,6 +527,14 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
+  function getAcademicSession()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_academic_session";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
   function getModality()
   {
     include "connection.php";
@@ -581,7 +554,7 @@ class User
   function getStudStatus()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_stud_status";
+    $sql = "SELECT * FROM tbl_studstatus";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -664,6 +637,17 @@ class User
     $returnValue["getDutyHours"] = $this->getDutyHours();
     $returnValue["getTimeIn"] = $this->getTime();
     $returnValue["getTimeOut"] = $this->getTimeOut();
+    return json_encode($returnValue);
+  }
+  function getScholarlist()
+  {
+    include "connection.php";
+    $returnValue = [];
+    $returnValue["getPercentStype"] = $this->getPercentStype();
+    $returnValue["getScholarTypeList"] = $this->getScholarTypeList();
+    $returnValue["getschoolyear"] = $this->getschoolyear();
+    $returnValue["getStudStatus"] = $this->getStudStatus();
+    $returnValue["getAcademicSession"] = $this->getAcademicSession();
     return json_encode($returnValue);
   }
   function getAllList()
@@ -1172,6 +1156,9 @@ switch ($operation) {
   case "getScholar":
     echo json_encode($user->getScholar());
     break;
+  case "getAcademicSession":
+    echo json_encode($user->getAcademicSession());
+    break;
   case "getscholarship_type":
     echo json_encode($user->getscholarship_type());
     break;
@@ -1179,7 +1166,7 @@ switch ($operation) {
     echo json_encode($user->getschoolyear());
     break;
   case "getStudStatus":
-    echo json_encode($$user->getStudStatus());
+    echo json_encode($user->getStudStatus());
     break;
   case "getSupervisor":
     echo $user->getSupervisor();
@@ -1195,6 +1182,9 @@ switch ($operation) {
     break;
   case "getCourseList":
     echo $user->getCourseList();
+    break;
+  case "getScholarlist":
+    echo $user->getScholarlist();
     break;
   case "getDutyHours":
     echo json_encode($user->getDutyHours());
