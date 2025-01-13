@@ -56,7 +56,7 @@ class User
     VALUES(:course_name, :course_dept_id)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("course_name", $json["course_name"]);
-    $stmt->bindParam("course_dept_id", $json["couse_dept_id"]);
+    $stmt->bindParam("course_dept_id", $json["course_dept_id"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -70,6 +70,29 @@ class User
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("type_name", $json["type_name"]);
     $stmt->bindParam("type_percent_id", $json["type_percent_id"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
+
+  function AddSubject($json)
+  {
+    //{"subject_code":"ITE 103", "subject_name": "Quantitative Reasoning"}
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT INTO tbl_subjects(sub_code, sub_descriptive_title, sub_section, sub_day_f2f_id, sub_time, sub_day_rc_id, sub_time_rc, sub_room, sub_supM_id, sub_learning_modalities_id, sub_limit)
+    VALUES(:sub_code, :sub_descriptive_title, :sub_section, :sub_day_f2f_id, :sub_time, :sub_day_rc_id, :sub_time_rc, :sub_room, :sub_supM_id, :sub_learning_modalities_id, :sub_limit)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam("sub_code", $json["sub_code"]);
+    $stmt->bindParam("sub_descriptive_title", $json["sub_descriptive_title"]);
+    $stmt->bindParam("sub_section", $json["sub_section"]);
+    $stmt->bindParam("sub_day_f2f_id", $json["sub_day_f2f_id"]);
+    $stmt->bindParam("sub_time", $json["sub_time"]);
+    $stmt->bindParam("sub_day_rc_id", $json["sub_day_rc_id"]);
+    $stmt->bindParam("sub_time_rc", $json["sub_time_rc"]);
+    $stmt->bindParam("sub_room", $json["sub_room"]);
+    $stmt->bindParam("sub_supM_id", $json["sub_supM_id"]);
+    $stmt->bindParam("sub_learning_modalities_id", $json["sub_learning_modalities_id"]);
+    $stmt->bindParam("sub_limit", $json["sub_limit"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -189,20 +212,7 @@ class User
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
 
-  function AddSubject($json)
-  {
-    //{"subject_code":"ITE 103", "subject_name": "Quantitative Reasoning"}
-    include "connection.php";
-    $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_subject(sub_code, sub_name, sub_day_id)
-    VALUES(:sub_code, :sub_name, :sub_day_id)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam("sub_code", $json["sub_code"]);
-    $stmt->bindParam("sub_name", $json["sub_name"]);
-    $stmt->bindParam("sub_day_id", $json["sub_day_id"]);
-    $stmt->execute();
-    return $stmt->rowCount() > 0 ? 1 : 0;
-  }
+
   function AddPercentStype($json)
   {
     //{"pstype_stype_id":1, "pstype_percent": 50}
