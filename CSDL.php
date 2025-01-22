@@ -310,13 +310,14 @@ class User
     //"assign_stud_id": "7", "assign_supM_id": "7", "assign_build_id": "2", "assign_day_id": "1", "assign_time_schedule_in": "3", "assign_time_schedule_out": "5", assign_room_id": "1", "assign_subject_id": "1", "assign_dutyH_Id": "1"}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_assign_scholars(assign_stud_id, assign_duty_hours_id, assign_office_id, assign_session_id, assign_render_status) 
-    VALUES (:assign_stud_id, :assign_duty_hours_id, :assign_office_id, :assign_session_id, :assign_render_status)";
+    $sql = "INSERT INTO tbl_assign_scholars(assign_stud_id, assign_duty_hours_id, assign_office_id, assign_mode_id, assign_session_id, assign_render_status) 
+    VALUES (:assign_stud_id, :assign_duty_hours_id, :assign_office_id, :assign_mode_id, :assign_session_id, :assign_render_status)";
 
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("assign_stud_id", $json["assign_stud_id"]);
     $stmt->bindParam("assign_duty_hours_id", $json["assign_duty_hours_id"]);
     $stmt->bindParam("assign_office_id", $json["assign_office_id"]);
+    $stmt->bindParam("assign_mode_id", $json["assign_mode_id"]);
     $stmt->bindParam("assign_session_id", $json["assign_session_id"]);
     $stmt->bindParam("assign_render_status", $json["assign_render_status"]);
     return $stmt->rowCount() > 0 ? 1 : 0;
@@ -375,7 +376,7 @@ class User
   // }
 
 
-
+  // 
   function AddOfficeMasterSubCodeAndAssignScholars($jsonArray)
   {
     include "connection.php";
@@ -383,9 +384,9 @@ class User
     $conn->beginTransaction();
 
     try {
-      // {    "offT_dept_id": 1,    "off_build_id": 2,    "offT_day_id": 3,    "offT_time": "08:00AM-05:00PM",    "offT_supM_id": "02-1213-00123",    "off_subject_id": 5,     "assign_stud_id": "02-2223-03766",    "assign_duty_hours_id": 2,    "assign_session_id": 1,    "assign_render_status": 0}
-      $sql = "INSERT INTO tbl_office_type(offT_dept_id, off_build_id, offT_day_id, offT_time, offT_supM_id)
-                VALUES (:offT_dept_id, :off_build_id, :offT_day_id, :offT_time, :offT_supM_id)";
+      // Insert into tbl_office_type
+      $sql = "INSERT INTO tbl_office_type (offT_dept_id, off_build_id, offT_day_id, offT_time, offT_supM_id)
+                  VALUES (:offT_dept_id, :off_build_id, :offT_day_id, :offT_time, :offT_supM_id)";
       $stmt = $conn->prepare($sql);
       $stmt->bindParam(":offT_dept_id", $json["offT_dept_id"]);
       $stmt->bindParam(":off_build_id", $json["off_build_id"]);
@@ -397,26 +398,77 @@ class User
       $lastOfficeTypeId = $conn->lastInsertId();
 
       // Insert into tbl_office_master
-      $sql = "INSERT INTO tbl_office_master(off_type_id, off_subject_id)
-                VALUES (:off_type_id, :off_subject_id)";
+      $sql = "INSERT INTO tbl_office_master (off_type_id, off_subject_id)
+                  VALUES (:off_type_id, :off_subject_id)";
       $stmt = $conn->prepare($sql);
       $stmt->bindParam(":off_type_id", $lastOfficeTypeId);
 
-      // Handle NULL for off_subject_id
       $offSubjectId = isset($json["off_subject_id"]) && $json["off_subject_id"] !== "" ? $json["off_subject_id"] : null;
       $stmt->bindValue(":off_subject_id", $offSubjectId, $offSubjectId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
       $stmt->execute();
       $lastOfficeMasterId = $conn->lastInsertId();
 
+      // Retrieve the off_id from tbl_office_master
+      $sql = "SELECT off_id FROM tbl_office_master WHERE off_type_id = :off_type_id";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":off_type_id", $lastOfficeTypeId);
+      $stmt->execute();
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$result) {
+        throw new Exception("No matching record found in tbl_office_master for off_type_id: $lastOfficeTypeId");
+      }
+      $offId = $result['off_id'];
+
+      // Get the session_id from tbl_academic_session
+      $sql = "SELECT session_id FROM tbl_academic_session WHERE session_name = :session_name";
+      $stmt = $conn->prepare($sql);
+
+      // Check if 'session_name' exists in the input JSON
+      if (!isset($json["session_name"]) || empty($json["session_name"])) {
+        throw new Exception("Missing or empty 'session_name' in input JSON.");
+      }
+
+      $stmt->bindParam(":session_name", $json["session_name"]);
+      $stmt->execute();
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+      if (!$result) {
+        throw new Exception("No matching record found in tbl_academic_session for session_name: " . $json["session_name"]);
+      }
+      $assignSessionId = $result["session_id"];
+
+
+      // Get the assignment_id from tbl_assignment
+      $sql = "SELECT assignment_id FROM tbl_assignment_mode WHERE assignment_name = :assignment_name";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":assignment_name", $json["assignment_name"]);
+      $stmt->execute();
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$result) {
+        throw new Exception("No matching record found in tbl_assignment_mode for assignment_name: " . $json["assign_mode_id"]);
+      }
+      $assignModeId = $result["assignment_id"];
+
+      // Get the dutyH_id from tbl_duty_hours
+      $sql = "SELECT dutyH_id FROM tbl_duty_hours WHERE dutyH_name = :dutyH_name";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":dutyH_name", $json["dutyH_name"]);
+      $stmt->execute();
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$result) {
+        throw new Exception("No matching record found in tbl_duty_hours for hours_name: " . $json["assign_duty_hours_id"]);
+      }
+      $assignDutyHoursId = $result["dutyH_id"];
+
       // Insert into tbl_assign_scholars
-      $sql = "INSERT INTO tbl_assign_scholars(assign_stud_id, assign_duty_hours_id, assign_office_id, assign_session_id, assign_render_status)
-                VALUES (:assign_stud_id, :assign_duty_hours_id, :assign_office_id, :assign_session_id, :assign_render_status)";
+      $sql = "INSERT INTO tbl_assign_scholars (assign_stud_id, assign_duty_hours_id, assign_office_id, assign_mode_id, assign_session_id)
+                  VALUES (:assign_stud_id, :assign_duty_hours_id, :assign_office_id, :assign_mode_id, :assign_session_id)";
       $stmt = $conn->prepare($sql);
       $stmt->bindParam(":assign_stud_id", $json["assign_stud_id"]);
-      $stmt->bindParam(":assign_duty_hours_id", $json["assign_duty_hours_id"]);
-      $stmt->bindParam(":assign_office_id", $lastOfficeMasterId);
-      $stmt->bindParam(":assign_session_id", $json["assign_session_id"]);
-      $stmt->bindParam(":assign_render_status", $json["assign_render_status"]);
+      $stmt->bindParam(":assign_duty_hours_id", $assignDutyHoursId);
+      $stmt->bindParam(":assign_office_id", $offId);
+      $stmt->bindParam(":assign_mode_id", $assignModeId);
+      $stmt->bindParam(":assign_session_id", $assignSessionId);
       $stmt->execute();
 
       $conn->commit();
@@ -426,6 +478,8 @@ class User
       return json_encode(["status" => "error", "message" => $e->getMessage()]);
     }
   }
+
+
 
 
 
@@ -683,8 +737,9 @@ class User
   function getAcademicSession()
   {
     include "connection.php";
-    $sql = "SELECT a.session_name, b.stud_name FROM tbl_academic_session a
-    INNER JOIN tbl_scholars b ON a.session_id = b.stud_academic_session_id";
+    $sql = "SELECT a.session_name, b.stud_name, c.sub_room FROM tbl_academic_session a
+    INNER JOIN tbl_scholars b ON a.session_id = b.stud_academic_session_id
+    INNER JOIN tbl_subjects c ON b.stud_course_id = c.sub_id";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -1043,9 +1098,7 @@ class User
     $json = json_decode($json, true); // Decode the JSON input
 
     // SQL query to fetch attendance records
-    $sql = "
-          SELECT 
-              dtr_date, 
+    $sql = " SELECT dtr_date, 
               TIME(dtr_time_in) AS dtr_time_in, 
               TIME(dtr_time_out) AS dtr_time_out, 
               dtr_school_year, 
@@ -1062,7 +1115,7 @@ class User
               tbl_semester AS d ON d.sem_id = a.dtr_semester
           WHERE 
               b.assign_stud_id = :assign_stud_id
-      ";
+  ";
 
     $stmt = $conn->prepare($sql);
     $stmt->bindParam(':assign_stud_id', $json['assign_stud_id']);
