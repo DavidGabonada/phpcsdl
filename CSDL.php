@@ -525,7 +525,7 @@ class User
 ";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
-    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
   }
   function getAdmin()
   {
@@ -701,7 +701,7 @@ class User
   {
     include "connection.php";
     $returnValue = [];
-    $returnValue["getScholar"] = $this->getScholar();
+    $returnValue["getScholarSession"] = $this->getScholarSession();
     $returnValue["getDutyHours"] = $this->getDutyHours();
     $returnValue["getOfficeMaster"] = $this->getOfficeMaster();
     $returnValue["getOfficeType"] = $this->getOfficeType();
