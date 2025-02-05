@@ -8,29 +8,42 @@ class User
         // {"username":"02-2223-08904","password":"IloveXena143"}
         include "connection.php";
         $json = json_decode($json, true);
-        $sql = "SELECT a.*, b.userLevel_name FROM tbl_scholars a
-                INNER JOIN tbl_user_level b ON b.userLevel_privilege = a.stud_user_level
-                WHERE (a.stud_school_id = :username OR a.stud_email = :username) AND BINARY a.stud_password = :password";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindParam("username", $json["username"]);
-        $stmt->bindParam("password", $json["password"]);
-        $stmt->execute();
-        if ($stmt->rowCount() > 0) {
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Query for scholars
+        $sqlScholars = "SELECT a.*, b.userLevel_name 
+        FROM tbl_scholars a
+        LEFT JOIN tbl_user_level b 
+            ON b.userLevel_privilege = a.stud_user_level
+        WHERE (a.stud_id = :username OR a.stud_email = :username) 
+        AND BINARY a.stud_password = :password";
+
+        $stmtScholars = $conn->prepare($sqlScholars);
+        $stmtScholars->bindParam(":username", $json["username"]);
+        $stmtScholars->bindParam(":password", $json["password"]);
+        $stmtScholars->execute();
+
+        if ($stmtScholars->rowCount() > 0) {
+            $user = $stmtScholars->fetch(PDO::FETCH_ASSOC);
             return json_encode([
                 "stud_id" => $user["stud_id"],
-                "stud_school_id" => $user["stud_school_id"],
-                "stud_password" => $user["stud_password"],
-                "stud_last_name" => $user["stud_last_name"],
-                "stud_first_name" => $user["stud_first_name"],
-                "stud_year_level" => $user["stud_year_level"],
-                "stud_email" => $user["stud_email"],
-                "stud_typeScholar_id" => $user["stud_typeScholar_id"],
-                "stud_scholarship_type_id" => $user["stud_scholarship_type_id"],
-                "stud_scholarship_sub_type_id" => $user["stud_scholarship_sub_type_id"],
-                "stud_contact_number" => $user["stud_contact_number"],
+                "stud_academic_session_id" => $user["stud_academic_session_id"],
+                "stud_name" => $user["stud_name"],
+                "stud_scholarship_id" => $user["stud_scholarship_id"],
+                "stud_department_id" => $user["stud_department_id"],
                 "stud_course_id" => $user["stud_course_id"],
-                "user_level" => $user["userLevel_name"]
+                "stud_year_id" => $user["stud_year_id"],
+                "stud_status_id" => $user["stud_status_id"],
+                "stud_percent_id" => $user["stud_percent_id"],
+                "stud_amount" => $user["stud_amount"],
+                "stud_applied_on_misc" => $user["stud_applied_on_misc"],
+                "stud_date" => $user["stud_date"],
+                "stud_modified_by" => $user["stud_modified_by"],
+                "stud_modified_date" => $user["stud_modified_date"],
+                "stud_password" => $user["stud_password"],
+                "stud_image_filename" => $user["stud_image_filename"],
+                "stud_contactNumber" => $user["stud_contactNumber"],
+                "stud_email" => $user["stud_email"],
+                "stud_user_level" => $user["userLevel_name"]
             ]);
         }
         //{}
@@ -53,23 +66,25 @@ class User
         //         "user_level" => $user["userLevel_name"],
         //     ]);
         // }
-        $sql = "SELECT a.*, b.userLevel_name FROM tbl_supervisor_master a 
-        INNER JOIN tbl_user_level b ON b.userLevel_privilege = a.supM_user_level 
-        WHERE (a.supM_employee_id = :username OR a.supM_email = :username) AND BINARY a.supM_password = :password";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindParam("username", $json["username"]);
-        $stmt->bindParam("password", $json["password"]);
-        $stmt->execute();
-        if ($stmt->rowCount() > 0) {
-            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        // Query for supervisors
+        $sqlSupervisors = "SELECT * 
+         FROM tbl_supervisors_master 
+         WHERE (supM_id = :username OR supM_email = :username) 
+         AND BINARY supM_password = :password";
+
+        $stmtSupervisors = $conn->prepare($sqlSupervisors);
+        $stmtSupervisors->bindParam(":username", $json["username"]);
+        $stmtSupervisors->bindParam(":password", $json["password"]);
+        $stmtSupervisors->execute();
+
+        if ($stmtSupervisors->rowCount() > 0) {
+            $user = $stmtSupervisors->fetch(PDO::FETCH_ASSOC);
             return json_encode([
                 "supM_id" => $user["supM_id"],
-                "supM_employee_id" => $user["supM_employee_id"],
+                "supM_name" => $user["supM_name"],
                 "supM_password" => $user["supM_password"],
-                "supM_last_name" => $user["supM_last_name"],
-                "supM_first_name" => $user["supM_first_name"],
                 "supM_email" => $user["supM_email"],
-                "user_level" => $user["userLevel_name"],
+                "supM_image_filename" => $user["supM_image_filename"]
             ]);
         }
         return 0;

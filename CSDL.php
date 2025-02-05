@@ -3,6 +3,18 @@ include "headers.php";
 
 class User
 {
+
+  function AddAcademicSession($json)
+  {
+    include "connection.php";
+    $json = json_decode($json, true);
+    $sql = "INSERT tbl_academic_session(session_name)
+    VALUES(:seesion_name)";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam("session_name", $json["session_name"]);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? 1 : 0;
+  }
   //UPDATED
   function addadministrator($json)
   {
@@ -322,167 +334,199 @@ class User
     $stmt->bindParam("assign_render_status", $json["assign_render_status"]);
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-  // function AddOfficeMasterSubCodeAndAssignScholars($jsonArray)
-  // {
-  //   include "connection.php";
-  //   $json = json_decode($jsonArray, true);
-  //   $conn->beginTransaction();
-  //   try {
-  //     //{"offT_id": "1", "offT_dept_id": "1", "offT_build_id": "1", "offT_day_id": "1", "offT_time": "10:30", "offT_supM_id": "02-1213-00123"}
 
-  //     $sql = "INSERT INTO tbl_office_type(offT_id , offT_dept_id, offT_build_id, offT_day_id, offT_time, offT_supM_id)
-  //     VALUES (:offT_id, :offT_dept_id, offT_build_id, :offT_day_id, :offT_time, :offT_supM_id)";
-
-  //     $stmt = $conn->prepare($sql);
-  //     // $stmt->bindParam("offT_id", $json["offT_id"]);
-  //     $stmt->bindParam("offT_dept_id", $json["offT_dept_id"]);
-  //     $stmt->bindParam("offT_build_id", $json["offT_build_id"]);
-  //     $stmt->bindParam("offT_day_id", $json["offT_day_id"]);
-  //     $stmt->bindParam("offT_time", $json["offT_time"]);
-  //     $stmt->bindParam("offT_supM_id", $json["offT_supM_id"]);
-  //     $stmt->execute();
-  //     $lastId = $conn->lastInsertId();
-
-  //     if ($stmt->rowCount() > 0) {
-  //       $sql = "INSERT INTO tbl_office_master(off_id, off_type_id, off_subject_id)
-  //       VALUES (:off_id, :off_type_id, :off_subject_id)";
-
-  //       $stmt = $conn->prepare($sql);
-  //       $stmt->bindParam("off_id", $lastId);
-  //       $stmt->bindParam("off_type_id", $json["off_type_id"]);
-  //       $stmt->bindParam("off_subject_id", $json["off_subject_id"]);
-  //       $stmt->execute();
-  //       $lastId = $conn->lastInsertId();
-
-  //       if ($stmt->rowCount() > 0) {
-  //         $sql = "INSERT INTO tbl_assign_scholars(assign_stud_id, assign_duty_hours_id, assign_office_id, assign_session_id, assign_render_status)
-  //         VALUES (:assign_stud_id, :assign_duty_hours_id, :assign_office_id, :assign_session_id, :assign_render_status)";
-  //         $stmt = $conn->prepare($sql);
-  //         $stmt->bindParam("assign_stud_id", $json["assign_stud_id"]);
-  //         $stmt->bindParam("assign_duty_hours_id", $json["assign_duty_hours_id"]);
-  //         $stmt->bindParam("assign_office_id", $lastId);
-  //         $stmt->bindParam("assign_session_id", $json["assign_session_id"]);
-  //         $stmt->bindParam("assign_render_status", $json["assign_render_status"]);
-  //         $stmt->execute();
-  //         $lastId = $conn->lastInsertId();
-  //       }
-  //     }
-  //   } catch (Exception $e) {
-  //     $conn->rollBack();
-  //     return $e;
-  //   }
-  //   $conn->commit();
-  //   return 1;
-  // }
-
-
-  // 
-  function AddOfficeMasterSubCodeAndAssignScholars($jsonArray)
+  function AddOfficeStudent($json)
   {
     include "connection.php";
-    $json = json_decode($jsonArray, true);
-    $conn->beginTransaction();
+    $json = json_decode($json, true);
 
     try {
-      // Insert into tbl_office_type
-      $sql = "INSERT INTO tbl_office_type (offT_dept_id, off_build_id, offT_day_id, offT_time, offT_supM_id)
-                  VALUES (:offT_dept_id, :off_build_id, :offT_day_id, :offT_time, :offT_supM_id)";
+      $conn->beginTransaction();
+
+      // Get the offT_id based on offT_dept_id from tbl_office_type
+      if (!isset($json["offT_dept_id"]) || empty($json["offT_dept_id"])) {
+        throw new Exception("Missing or empty 'offT_dept_id' in input JSON.");
+      }
+      $sql = "SELECT offT_id FROM tbl_office_type WHERE offT_dept_id = :offT_dept_id";
       $stmt = $conn->prepare($sql);
       $stmt->bindParam(":offT_dept_id", $json["offT_dept_id"]);
-      $stmt->bindParam(":off_build_id", $json["off_build_id"]);
-      $stmt->bindParam(":offT_day_id", $json["offT_day_id"]);
-      $stmt->bindParam(":offT_time", $json["offT_time"]);
-      $stmt->bindParam(":offT_supM_id", $json["offT_supM_id"]);
-      $stmt->execute();
-
-      $lastOfficeTypeId = $conn->lastInsertId();
-
-      // Insert into tbl_office_master
-      $sql = "INSERT INTO tbl_office_master (off_type_id, off_subject_id)
-                  VALUES (:off_type_id, :off_subject_id)";
-      $stmt = $conn->prepare($sql);
-      $stmt->bindParam(":off_type_id", $lastOfficeTypeId);
-
-      $offSubjectId = isset($json["off_subject_id"]) && $json["off_subject_id"] !== "" ? $json["off_subject_id"] : null;
-      $stmt->bindValue(":off_subject_id", $offSubjectId, $offSubjectId === null ? PDO::PARAM_NULL : PDO::PARAM_INT);
-      $stmt->execute();
-      $lastOfficeMasterId = $conn->lastInsertId();
-
-      // Retrieve the off_id from tbl_office_master
-      $sql = "SELECT off_id FROM tbl_office_master WHERE off_type_id = :off_type_id";
-      $stmt = $conn->prepare($sql);
-      $stmt->bindParam(":off_type_id", $lastOfficeTypeId);
       $stmt->execute();
       $result = $stmt->fetch(PDO::FETCH_ASSOC);
       if (!$result) {
-        throw new Exception("No matching record found in tbl_office_master for off_type_id: $lastOfficeTypeId");
+        throw new Exception("No matching record found in tbl_office_type for offT_dept_id: " . $json["offT_dept_id"]);
       }
-      $offId = $result['off_id'];
+      $offTId = $result["offT_id"]; // Retrieve the offT_id
+
+      // Insert into tbl_office_master with the retrieved offT_id
+      $sql = "INSERT INTO tbl_office_master (off_type_id) VALUES (:off_type_id)";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":off_type_id", $offTId); // Use the retrieved offT_id here
+      $stmt->execute();
+      $offId = $conn->lastInsertId(); // Retrieve the last inserted off_id
+
+      if (!$offId) {
+        throw new Exception("Failed to retrieve off_id after inserting into tbl_office_master.");
+      }
 
       // Get the session_id from tbl_academic_session
-      $sql = "SELECT session_id FROM tbl_academic_session WHERE session_name = :session_name";
-      $stmt = $conn->prepare($sql);
-
-      // Check if 'session_name' exists in the input JSON
       if (!isset($json["session_name"]) || empty($json["session_name"])) {
         throw new Exception("Missing or empty 'session_name' in input JSON.");
       }
-
+      $sql = "SELECT session_id FROM tbl_academic_session WHERE session_name = :session_name";
+      $stmt = $conn->prepare($sql);
       $stmt->bindParam(":session_name", $json["session_name"]);
       $stmt->execute();
       $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
       if (!$result) {
         throw new Exception("No matching record found in tbl_academic_session for session_name: " . $json["session_name"]);
       }
       $assignSessionId = $result["session_id"];
 
-
-      // Get the assignment_id from tbl_assignment
+      // Get the assignment_id from tbl_assignment_mode
+      if (!isset($json["assignment_name"]) || empty($json["assignment_name"])) {
+        throw new Exception("Missing or empty 'assignment_name' in input JSON.");
+      }
       $sql = "SELECT assignment_id FROM tbl_assignment_mode WHERE assignment_name = :assignment_name";
       $stmt = $conn->prepare($sql);
       $stmt->bindParam(":assignment_name", $json["assignment_name"]);
       $stmt->execute();
       $result = $stmt->fetch(PDO::FETCH_ASSOC);
       if (!$result) {
-        throw new Exception("No matching record found in tbl_assignment_mode for assignment_name: " . $json["assign_mode_id"]);
+        throw new Exception("No matching record found in tbl_assignment_mode for assignment_name: " . $json["assignment_name"]);
       }
       $assignModeId = $result["assignment_id"];
 
       // Get the dutyH_id from tbl_duty_hours
+      if (!isset($json["dutyH_name"]) || empty($json["dutyH_name"])) {
+        throw new Exception("Missing or empty 'dutyH_name' in input JSON.");
+      }
       $sql = "SELECT dutyH_id FROM tbl_duty_hours WHERE dutyH_name = :dutyH_name";
       $stmt = $conn->prepare($sql);
       $stmt->bindParam(":dutyH_name", $json["dutyH_name"]);
       $stmt->execute();
       $result = $stmt->fetch(PDO::FETCH_ASSOC);
       if (!$result) {
-        throw new Exception("No matching record found in tbl_duty_hours for hours_name: " . $json["assign_duty_hours_id"]);
+        throw new Exception("No matching record found in tbl_duty_hours for dutyH_name: " . $json["dutyH_name"]);
       }
       $assignDutyHoursId = $result["dutyH_id"];
 
-      // Insert into tbl_assign_scholars
+      // Insert into tbl_assign_scholars with retrieved off_id
       $sql = "INSERT INTO tbl_assign_scholars (assign_stud_id, assign_duty_hours_id, assign_office_id, assign_mode_id, assign_session_id)
                   VALUES (:assign_stud_id, :assign_duty_hours_id, :assign_office_id, :assign_mode_id, :assign_session_id)";
       $stmt = $conn->prepare($sql);
       $stmt->bindParam(":assign_stud_id", $json["assign_stud_id"]);
       $stmt->bindParam(":assign_duty_hours_id", $assignDutyHoursId);
-      $stmt->bindParam(":assign_office_id", $offId);
+      $stmt->bindParam(":assign_office_id", $offId);  // Use the last inserted off_id
       $stmt->bindParam(":assign_mode_id", $assignModeId);
       $stmt->bindParam(":assign_session_id", $assignSessionId);
       $stmt->execute();
 
+      // Commit the transaction
       $conn->commit();
-      return json_encode(["status" => "success", "message" => "Records successfully inserted."]);
+      return 1; // Success
     } catch (Exception $e) {
+      // Rollback the transaction if any error occurs
       $conn->rollBack();
-      return json_encode(["status" => "error", "message" => $e->getMessage()]);
+      return 0; // Failure
     }
   }
 
+  function AddStudentFacilitator($json)
+  {
+    include "connection.php";
+    $json = json_decode($json, true);
 
+    try {
+      $conn->beginTransaction();
 
+      // Insert into tbl_office_master and get the off_id
+      $sql = "INSERT INTO tbl_office_master (off_subject_id) VALUES (:off_subject_id)";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":off_subject_id", $json["off_subject_id"]);
+      $stmt->execute();  // Make sure to execute the insert query here
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
+      // Retrieve the off_id from tbl_office_master (last inserted record)
+      $offId = $conn->lastInsertId();
 
+      if (!$offId) {
+        throw new Exception("Failed to retrieve off_id after inserting into tbl_office_master.");
+      }
+
+      // Get the session_id from tbl_academic_session
+      if (!isset($json["session_name"]) || empty($json["session_name"])) {
+        throw new Exception("Missing or empty 'session_name' in input JSON.");
+      }
+      $sql = "SELECT session_id FROM tbl_academic_session WHERE session_name = :session_name";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":session_name", $json["session_name"]);
+      $stmt->execute();
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$result) {
+        throw new Exception("No matching record found in tbl_academic_session for session_name: " . $json["session_name"]);
+      }
+      $assignSessionId = $result["session_id"];
+
+      // Get the assignment_id from tbl_assignment_mode
+      if (!isset($json["assignment_name"]) || empty($json["assignment_name"])) {
+        throw new Exception("Missing or empty 'assignment_name' in input JSON.");
+      }
+      $sql = "SELECT assignment_id FROM tbl_assignment_mode WHERE assignment_name = :assignment_name";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":assignment_name", $json["assignment_name"]);
+      $stmt->execute();
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$result) {
+        throw new Exception("No matching record found in tbl_assignment_mode for assignment_name: " . $json["assignment_name"]);
+      }
+      $assignModeId = $result["assignment_id"];
+
+      // Get the dutyH_id from tbl_duty_hours
+      if (!isset($json["dutyH_name"]) || empty($json["dutyH_name"])) {
+        throw new Exception("Missing or empty 'dutyH_name' in input JSON.");
+      }
+      $sql = "SELECT dutyH_id FROM tbl_duty_hours WHERE dutyH_name = :dutyH_name";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":dutyH_name", $json["dutyH_name"]);
+      $stmt->execute();
+      $result = $stmt->fetch(PDO::FETCH_ASSOC);
+      if (!$result) {
+        throw new Exception("No matching record found in tbl_duty_hours for dutyH_name: " . $json["dutyH_name"]);
+      }
+      $assignDutyHoursId = $result["dutyH_id"];
+
+      // Insert into tbl_assign_scholars with retrieved off_id
+      $sql = "INSERT INTO tbl_assign_scholars (assign_stud_id, assign_duty_hours_id, assign_office_id, assign_mode_id, assign_session_id)
+                            VALUES (:assign_stud_id, :assign_duty_hours_id, :assign_office_id, :assign_mode_id, :assign_session_id)";
+      $stmt = $conn->prepare($sql);
+      $stmt->bindParam(":assign_stud_id", $json["assign_stud_id"]);
+      $stmt->bindParam(":assign_duty_hours_id", $assignDutyHoursId);
+      $stmt->bindParam(":assign_office_id", $offId);  // Use the last inserted off_id
+      $stmt->bindParam(":assign_mode_id", $assignModeId);
+      $stmt->bindParam(":assign_session_id", $assignSessionId);
+      $stmt->execute();
+
+      // Commit the transaction
+      $conn->commit();
+      return 1; // Success
+    } catch (Exception $e) {
+      // Rollback the transaction if any error occurs
+      $conn->rollBack();
+      return "Error: " . $e->getMessage(); // Return the error message
+    }
+  }
+  function getScholarSession()
+  {
+    include "connection.php";
+    $sql = "SELECT b.stud_active_id, a.stud_name, c.session_name
+    FROM tbl_scholars a
+    INNER JOIN tbl_activescholars b ON b.stud_active_id= a.stud_id
+    LEFT JOIN tbl_academic_session c ON b.stud_active_academic_session_id = c.session_id;
+";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
+  }
   function getAdmin()
   {
     include "connection.php";
@@ -491,7 +535,18 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
-
+  function getScholar()
+  {
+    include "connection.php";
+    $stmt = "SELECT stud_active_id, stud_name, course_name, session_name
+    FROM tbl_activescholars a 
+    INNER JOIN tbl_scholars b ON b.stud_id = a.stud_active_id
+    INNER JOIN tbl_course c ON c.course_id = b.stud_course_id
+    INNER JOIN tbl_academic_session d ON d.session_id = a.stud_active_academic_session_id";
+    $stmt = $conn->prepare($stmt);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
+  }
 
   function getscholarship_type()
   {
@@ -525,6 +580,51 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
+  function getScholarAllAvailableSchedule($json)
+  {
+    include "connection.php";
+    $json = json_decode($json, true);
+
+    // Ensure that $json is valid and contains the correct field
+    if (!is_array($json) || !isset($json["ocr_studActive_id"])) {
+      return json_encode(['error' => 'Invalid JSON data received or missing ocr_studActive_id']);
+    }
+
+    $sql = "SELECT * FROM tbl_ocr WHERE ocr_studActive_id = :ocr_studActive_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindParam(":ocr_studActive_id", $json["ocr_studActive_id"]);
+
+    try {
+      $stmt->execute();
+      $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+      // If no records were found, return an empty array instead of a scalar value
+      if (empty($result)) {
+        return json_encode([]);
+      }
+
+      return json_encode($result);
+    } catch (Exception $e) {
+      return json_encode(['error' => 'Error executing query: ' . $e->getMessage()]);
+    }
+  }
+
+
+
+
+  function getAllSubjects()
+  {
+    include "connection.php";
+    $sql = "SELECT a.sub_id, a.sub_code, a.sub_descriptive_title, a.sub_section, a.sub_room, a.sub_time, b.day_name AS f2f_day, d.day_name AS rc_day, learning_name, a.sub_used
+            FROM tbl_subjects AS a
+            INNER JOIN tbl_day AS b ON b.day_id = a.sub_day_f2f_id
+            INNER JOIN tbl_learning_modalities AS c ON c.learning_id = a.sub_learning_modalities_id
+            INNER JOIN tbl_day AS d ON d.day_id = a.sub_day_rc_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    return json_encode($result);
+  }
 
   function getschoolyear()
   {
@@ -533,15 +633,6 @@ class User
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
-  }
-  function getScholar()
-  {
-    include "connection.php";
-    $sql = "SELECT a.*, b.session_name FROM tbl_scholars a
-    INNER JOIN tbl_academic_session b ON a.stud_academic_session_id = b.session_id";
-    $stmt = $conn->prepare($sql);
-    $stmt->execute();
-    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
 
   function getSchoolYearLevel()
@@ -576,6 +667,7 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
+
   function getsublist()
   {
     include "connection.php";
@@ -583,6 +675,27 @@ class User
     $returnValue["getDutyHours"] = $this->getDutyHours();
     $returnValue["scholarshipType"] = $this->getscholarship_type();
     return json_encode($returnValue);
+  }
+  function getDepartmentMaster()
+  {
+    include "connection.php";
+    $sql = "SELECT a.dept_id, b.offT_dept_id, a.dept_name, c.day_name, b.offT_time, d.supM_name, b.off_limit, b.offT_supM_id 
+              FROM tbl_department a
+              INNER JOIN tbl_office_type b ON b.offT_dept_id = a.dept_id
+              INNER JOIN tbl_day c ON c.day_id = b.offT_day_id
+              LEFT JOIN tbl_supervisors_master d ON d.supM_id = b.offT_supM_id";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+
+  function getSubjectMaster()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_subject_master";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
   function getAssignScholar()
   {
@@ -594,6 +707,7 @@ class User
     $returnValue["getOfficeType"] = $this->getOfficeType();
     $returnValue["getAssignmentMode"] = $this->getAssignmentMode();
     $returnValue["getDepartment"] = $this->getDepartment();
+    $returnValue["getDepartmentMaster"] = $this->getDepartmentMaster();
     $returnValue["getSubject"] = $this->getSubject();
     $returnValue["getDays"] = $this->getDays();
     $returnValue["getBuilding"] = $this->getBuilding();
@@ -657,7 +771,7 @@ class User
   function getSchoolYearList()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_sy";
+    $sql = "SELECT * FROM tbl_year";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -737,9 +851,13 @@ class User
   function getAcademicSession()
   {
     include "connection.php";
-    $sql = "SELECT a.session_name, b.stud_name, c.sub_room FROM tbl_academic_session a
-    INNER JOIN tbl_scholars b ON a.session_id = b.stud_academic_session_id
-    INNER JOIN tbl_subjects c ON b.stud_course_id = c.sub_id";
+    $sql = "SELECT stud_name, session_name, sub_room
+    FROM tbl_scholars a
+    INNER JOIN tbl_activescholars b ON b.stud_active_id = a.stud_id
+    LEFT JOIN tbl_academic_session c ON c.session_id = b.stud_active_academic_session_id
+    LEFT JOIN tbl_assign_scholars d ON d.assign_stud_id = b.stud_active_id
+    LEFT JOIN tbl_office_master e ON e.off_id = d.assign_office_id
+    INNER JOIN tbl_subjects f ON f.sub_id = e.off_subject_id;";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -776,65 +894,12 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
-  // function login($json)
-  // {
-  //   include "connection.php";
-  //   $json = json_decode($json, true);
-  //   $sql = "SELECT a.adm_id, a.adm_name, a.adm_email, a.adm_password a.adm_user_level FROM tbladmin a
-  //           INNER JOIN tbluserlevel b ON a.adm_userLevel = b.userL_id
-  //           WHERE adm_email = :username AND BINARY adm_password = :password";
-  //   $stmt = $conn->prepare($sql);
-  //   $stmt->bindParam(':username', $json['username']);
-  //   $stmt->bindParam(':password', $json['password']);
-  //   $stmt->execute();
 
-  //   if ($stmt->rowCount() > 0) {
-  //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-  //     return json_encode([
-  //       'adm_id' => $user['adm_id'],
-  //       'adm_user_level' => $user['adm_user_level'],
-  //       'adm_name' => $user['adm_name'],
-  //       'adm_email' => $user['adm_email']
-  //     ]);
-  //   }
-  //   $sql = "SELECT * FROM tblsupervisor_master WHERE supM_email = :username AND BINARY supM_password = :password";
-  //   $stmt = $conn->prepare($sql);
-  //   $stmt->bindParam(':username', $json['username']);
-  //   $stmt->bindParam(':password', $json['password']);
-  //   $stmt->execute();
-  //   if ($stmt->rowCount() > 0) {
-  //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-  //     return json_encode([
-  //       'supM_id' => $user['supM_id'],
-  //       'sup_user_level' => $user['sup_user_level'],
-  //       'supM_name' => $user['supM_name'],
-  //       'supM_email' => $user['supM_email']
-  //     ]);
-  //   }
-  //   $sql = "SELECT a.*, b.* FROM tbl_scholars a
-
-  //   WHERE a.cand_email = :username AND BINARY a.cand_password = :password";
-  //   $stmt = $conn->prepare($sql);
-  //   $stmt->bindParam(':username', $json['username']);
-  //   $stmt->bindParam(':password', $json['password']);
-  //   $stmt->execute();
-  //   if ($stmt->rowCount() > 0) {
-  //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-  //     return json_encode([
-  //       'cand_id' => $user['cand_id'],
-  //       'cand_firstname' => $user['cand_firstname'],
-  //       'cand_lastname' => $user['cand_lastname'],
-  //       'cand_email' => $user['cand_email'],
-  //       'cand_userLevel' => $user['cand_userLevel']
-  //     ]);
-  //   }
-  //   return json_encode(null);
-  // }
   function getDutyAssign()
   {
     include "connection.php";
     $returnValue = [];
-    $returnValue["getScholar"] = $this->getScholar();
+    $returnValue["getScholarSession"] = $this->getScholarSession();
     $returnValue["getRoom"] = $this->getRoom();
     $returnValue["getBuilding"] = $this->getBuilding();
     $returnValue["getSupervisorMaster"] = $this->getSupervisorMaster();
@@ -1280,6 +1345,7 @@ class User
     return json_encode($result);
   }
 }
+
 function recordExists($value, $table, $column)
 {
   include "connection.php";
@@ -1297,6 +1363,9 @@ switch ($operation) {
     // case "login":
     //   echo $user->login($json);
     //   break;
+  case "AddAcademicSession":
+    echo $user->AddAcademicSession($json);
+    break;
   case "addDepartment":
     echo $user->addDepartment($json);
     break;
@@ -1351,11 +1420,17 @@ switch ($operation) {
   case "AddSupervisorMaster":
     echo $user->AddSupervisorMaster($json);
     break;
-  case "AddOfficeMasterSubCodeAndAssignScholars":
-    echo $user->AddOfficeMasterSubCodeAndAssignScholars($json);
+  case "AddOfficeStudent":
+    echo $user->AddOfficeStudent($json);
+    break;
+  case "AddStudentFacilitator":
+    echo $user->AddStudentFacilitator($json);
     break;
   case "getAddScholarDropDown":
     echo $user->getAddScholarDropDown();
+    break;
+  case "getDepartmentMaster";
+    echo json_encode($user->getDepartmentMaster());
     break;
 
   case "getAdmin":
@@ -1412,6 +1487,9 @@ switch ($operation) {
   case "getcourse":
     echo json_encode($user->getcourse());
     break;
+  case "getScholarSession":
+    echo json_encode($user->getScholarSession());
+    break;
   case "getTime":
     echo json_encode($user->getTime());
     break;
@@ -1459,6 +1537,12 @@ switch ($operation) {
     break;
   case "getPercentStype":
     echo json_encode($user->getPercentStype());
+    break;
+  case "getScholarAllAvailableSchedule":
+    echo $user->getScholarAllAvailableSchedule($json);
+    break;
+  case "getAllSubjects":
+    echo $user->getAllSubjects();
     break;
   case "getDutyAssign":
     echo $user->getDutyAssign();
