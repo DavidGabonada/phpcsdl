@@ -178,7 +178,83 @@ class User
   }
 
 
+  function AddScholarBatch($json)
+  {
+    include "connection.php";
 
+    $json = json_decode($json, true);
+    $conn->beginTransaction();
+
+    try {
+      // Prepare the SQL statements
+      $sql1 = "INSERT INTO tbl_scholars (
+                      stud_id, stud_name, stud_scholarship_id, stud_department_id, stud_course_id, 
+                      stud_password, stud_image_filename, stud_contactNumber, stud_email, stud_user_level
+                  ) VALUES (
+                      :stud_id, :stud_name, :stud_scholarship_id, :stud_department_id, :stud_course_id, 
+                      :stud_password, :stud_image_filename, :stud_contactNumber, :stud_email, 1
+                  )";
+
+      $stmt1 = $conn->prepare($sql1);
+
+      $sql2 = "INSERT INTO tbl_activescholars (
+                      stud_active_id, stud_active_academic_session_id, stud_active_year_id, 
+                      stud_active_status_id, stud_active_percent_id, stud_active_amount, 
+                      stud_active_applied_on_tuition, stud_active_applied_on_misc, 
+                      stud_date, stud_modified_by, stud_modified_date
+                  ) VALUES (
+                      :stud_active_id, :stud_active_academic_session_id, :stud_active_year_id, 
+                      :stud_active_status_id, :stud_active_percent_id, :stud_active_amount, 
+                      :stud_active_applied_on_tuition, :stud_active_applied_on_misc, 
+                      :stud_date, :stud_active_modified_by, :stud_active_modified_date
+                  )";
+
+      $stmt2 = $conn->prepare($sql2);
+
+      foreach ($json as $student) {
+        // Generate password
+        $password = $student["stud_id"] . "123";
+
+        // Bind parameters for tbl_scholars
+        $stmt1->bindParam(":stud_id", $student["stud_id"]);
+        $stmt1->bindParam(":stud_name", $student["stud_name"]);
+        $stmt1->bindParam(":stud_scholarship_id", $student["stud_scholarship_id"]);
+        $stmt1->bindParam(":stud_department_id", $student["stud_department_id"]);
+        $stmt1->bindParam(":stud_course_id", $student["stud_course_id"]);
+        $stmt1->bindParam(":stud_password", $password);
+        $stmt1->bindParam(":stud_image_filename", $student["stud_image_file"]);
+        $stmt1->bindParam(":stud_contactNumber", $student["stud_contactNumber"]);
+        $stmt1->bindParam(":stud_email", $student["stud_email"]);
+
+        $stmt1->execute();
+
+        // Get the last inserted ID
+        // $lastInsertedId = $conn->lastInsertId();
+
+        // Bind parameters for tbl_active_scholars
+        $stmt2->bindParam(":stud_active_id", $student["stud_id"]);
+        $stmt2->bindParam(":stud_active_academic_session_id", $student["stud_active_academic_session_id"]);
+        $stmt2->bindParam(":stud_active_year_id", $student["stud_active_year_id"]);
+        $stmt2->bindParam(":stud_active_status_id", $student["stud_status_id"]);
+        $stmt2->bindParam(":stud_active_percent_id", $student["stud_active_percent_id"]);
+        $stmt2->bindParam(":stud_active_amount", $student["stud_active_amount"]);
+        $stmt2->bindParam(":stud_active_applied_on_tuition", $student["stud_active_applied_on_tuition"]);
+        $stmt2->bindParam(":stud_active_applied_on_misc", $student["stud_active_applied_on_misc"]);
+        $stmt2->bindParam(":stud_date", $student["stud_date"]);
+        $stmt2->bindParam(":stud_active_modified_by", $student["stud_modified_by"]);
+        $stmt2->bindParam(":stud_active_modified_date", $student["stud_modified_date"]);
+
+        $stmt2->execute();
+      }
+
+      $conn->commit();
+      return 1;
+    } catch (Exception $e) {
+      $conn->rollBack();
+      echo "Error: " . $e->getMessage();
+      return 0;
+    }
+  }
 
   function addAssignStudent($json)
   {
@@ -862,6 +938,16 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
   }
+
+  function getSessionAcademic()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_academic_session";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+
   function getModality()
   {
     include "connection.php";
@@ -918,7 +1004,7 @@ class User
     $returnValue["getScholarTypeList"] = $this->getScholarTypeList();
     $returnValue["getschoolyear"] = $this->getschoolyear();
     $returnValue["getStudStatus"] = $this->getStudStatus();
-    $returnValue["getAcademicSession"] = $this->getAcademicSession();
+    $returnValue["getAcademicSession"] = $this->getSessionAcademic();
     return json_encode($returnValue);
   }
   function getAllList()
@@ -1381,6 +1467,9 @@ switch ($operation) {
   case "AddScholar":
     echo $user->AddScholar($json);
     break;
+  case "AddScholarBatch":
+    echo $user->AddScholarBatch($json);
+    break;
   case "addAssignStudent":
     echo $user->addAssignStudent($json);
     break;
@@ -1429,10 +1518,12 @@ switch ($operation) {
   case "getAddScholarDropDown":
     echo $user->getAddScholarDropDown();
     break;
-  case "getDepartmentMaster";
+  case "getDepartmentMaster":
     echo json_encode($user->getDepartmentMaster());
     break;
-
+  case "getSessionAcademic":
+    echo json_encode($user->getSessionAcademic());
+    break;
   case "getAdmin":
     echo json_encode($user->getAdmin());
     break;
