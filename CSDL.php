@@ -18,22 +18,28 @@ class User
   //UPDATED
   function addadministrator($json)
   {
-
     include "connection.php";
     $json = json_decode($json, true);
-    $password = $json["adm_employee_id"] . substr($json["adm_last_name"], 0, 2);
-    $password = substr($json["adm_last_name"], 0, 2) . $json["adm_employee_id"];
-    $sql = "INSERT INTO tbl_admin(adm_name, adm_middle_name, adm_password, adm_email, adm_image_filename, adm_user_level)
-    VALUES(:adm_name, :adm_password, :adm_email, :adm_image_filename, :adm_user_level)";
+    $password = substr($json["adm_name"], 0, 2) . $json["adm_id"];
+    $user_level = isset($json["adm_user_level"]) ? $json["adm_user_level"] : 3;
+
+    $sql = "INSERT INTO tbl_admin(adm_id, adm_name, adm_password, adm_email, adm_image_filename, adm_user_level) 
+                VALUES(:adm_id, :adm_name, :adm_password, :adm_email, :adm_image_filename, :adm_user_level)";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam("adm_name", $json["adm_name"]);
-    $stmt->bindParam("adm_password", $password);
-    $stmt->bindParam("adm_email", $json["adm_email"]);
-    $stmt->bindParam("adm_image_filename", $json["adm_image_filename"]);
-    $stmt->bindParam("adm_user_level", $json["adm_user_level"]);
+    $stmt->bindParam(":adm_id", $json["adm_id"]);
+    $stmt->bindParam(":adm_name", $json["adm_name"]);
+    $stmt->bindParam(":adm_password", $password); // Removed hashing
+    $stmt->bindParam(":adm_email", $json["adm_email"]);
+    $stmt->bindParam(":adm_image_filename", $json["adm_image_filename"]);
+    $stmt->bindParam(":adm_user_level", $user_level);
+
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
+
+
+
+
   function addDepartment($json)
   {
     //{"dept_name":"bea"}
@@ -186,28 +192,38 @@ class User
     $conn->beginTransaction();
 
     try {
-      // Prepare the SQL statements
+      // SQL for tbl_scholars (insert or update only new data)
       $sql1 = "INSERT INTO tbl_scholars (
-                      stud_id, stud_name, stud_scholarship_id, stud_department_id, stud_course_id, 
-                      stud_password, stud_image_filename, stud_contactNumber, stud_email, stud_user_level
-                  ) VALUES (
-                      :stud_id, :stud_name, :stud_scholarship_id, :stud_department_id, :stud_course_id, 
-                      :stud_password, :stud_image_filename, :stud_contactNumber, :stud_email, 1
-                  )";
+                          stud_id, stud_name, stud_scholarship_id, stud_department_id, stud_course_id, 
+                          stud_password, stud_image_filename, stud_contactNumber, stud_email, stud_user_level
+                      ) VALUES (
+                          :stud_id, :stud_name, :stud_scholarship_id, :stud_department_id, :stud_course_id, 
+                          :stud_password, :stud_image_filename, :stud_contactNumber, :stud_email, 1
+                      ) ON DUPLICATE KEY UPDATE 
+                          stud_name = VALUES(stud_name),
+                          stud_scholarship_id = VALUES(stud_scholarship_id),
+                          stud_department_id = VALUES(stud_department_id),
+                          stud_course_id = VALUES(stud_course_id),
+                          stud_password = VALUES(stud_password),
+                          stud_image_filename = VALUES(stud_image_filename),
+                          stud_contactNumber = VALUES(stud_contactNumber),
+                          stud_email = VALUES(stud_email)";
 
       $stmt1 = $conn->prepare($sql1);
 
-      $sql2 = "INSERT INTO tbl_activescholars (
-                      stud_active_id, stud_active_academic_session_id, stud_active_year_id, 
-                      stud_active_status_id, stud_active_percent_id, stud_active_amount, 
-                      stud_active_applied_on_tuition, stud_active_applied_on_misc, 
-                      stud_date, stud_modified_by, stud_modified_date
-                  ) VALUES (
-                      :stud_active_id, :stud_active_academic_session_id, :stud_active_year_id, 
-                      :stud_active_status_id, :stud_active_percent_id, :stud_active_amount, 
-                      :stud_active_applied_on_tuition, :stud_active_applied_on_misc, 
-                      :stud_date, :stud_active_modified_by, :stud_active_modified_date
-                  )";
+      // SQL for tbl_activescholars (update existing records without modifying stud_active_id)
+      $sql2 = "UPDATE tbl_activescholars SET 
+                          stud_active_academic_session_id = :stud_active_academic_session_id,
+                          stud_active_year_id = :stud_active_year_id,
+                          stud_active_status_id = :stud_active_status_id,
+                          stud_active_percent_id = :stud_active_percent_id,
+                          stud_active_amount = :stud_active_amount,
+                          stud_active_applied_on_tuition = :stud_active_applied_on_tuition,
+                          stud_active_applied_on_misc = :stud_active_applied_on_misc,
+                          stud_date = :stud_date,
+                          stud_modified_by = :stud_modified_by,
+                          stud_modified_date = :stud_modified_date
+                      WHERE stud_active_id = :stud_active_id";
 
       $stmt2 = $conn->prepare($sql2);
 
@@ -225,13 +241,9 @@ class User
         $stmt1->bindParam(":stud_image_filename", $student["stud_image_file"]);
         $stmt1->bindParam(":stud_contactNumber", $student["stud_contactNumber"]);
         $stmt1->bindParam(":stud_email", $student["stud_email"]);
-
         $stmt1->execute();
 
-        // Get the last inserted ID
-        // $lastInsertedId = $conn->lastInsertId();
-
-        // Bind parameters for tbl_active_scholars
+        // Bind parameters for tbl_activescholars (update only, no insert)
         $stmt2->bindParam(":stud_active_id", $student["stud_id"]);
         $stmt2->bindParam(":stud_active_academic_session_id", $student["stud_active_academic_session_id"]);
         $stmt2->bindParam(":stud_active_year_id", $student["stud_active_year_id"]);
@@ -241,9 +253,8 @@ class User
         $stmt2->bindParam(":stud_active_applied_on_tuition", $student["stud_active_applied_on_tuition"]);
         $stmt2->bindParam(":stud_active_applied_on_misc", $student["stud_active_applied_on_misc"]);
         $stmt2->bindParam(":stud_date", $student["stud_date"]);
-        $stmt2->bindParam(":stud_active_modified_by", $student["stud_modified_by"]);
-        $stmt2->bindParam(":stud_active_modified_date", $student["stud_modified_date"]);
-
+        $stmt2->bindParam(":stud_modified_by", $student["stud_modified_by"]);
+        $stmt2->bindParam(":stud_modified_date", $student["stud_modified_date"]);
         $stmt2->execute();
       }
 
@@ -255,6 +266,7 @@ class User
       return 0;
     }
   }
+
 
   function addAssignStudent($json)
   {

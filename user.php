@@ -93,19 +93,32 @@ class User
 
     function adminLogin($json)
     {
-        // {"username":"Manu.jabulan.coc@phinmaed.com","password":"Ja02-2021-03668"}
         include "connection.php";
+        session_start();
+
         $json = json_decode($json, true);
+        $username = $json["username"];
+        $password = $json["password"];
+        $captcha = $json["captcha"];
+
+        // Verify CAPTCHA
+        if (!isset($_SESSION["captcha"]) || strtolower($_SESSION["captcha"]) !== strtolower($captcha)) {
+            return "INVALID_CAPTCHA";
+        }
+
         $sql = "SELECT * FROM tbl_admin WHERE BINARY adm_email = :username AND BINARY adm_password = :password";
         $stmt = $conn->prepare($sql);
-        $stmt->bindParam("username", $json["username"]);
-        $stmt->bindParam("password", $json["password"]);
+        $stmt->bindParam(":username", $username);
+        $stmt->bindParam(":password", $password);
         $stmt->execute();
+
         if ($stmt->rowCount() > 0) {
             return $stmt->fetch(PDO::FETCH_ASSOC);
         }
+
         return 0;
     }
+
 
     function updateImage($json)
     {
