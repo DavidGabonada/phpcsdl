@@ -626,15 +626,21 @@ class User
   function getScholar()
   {
     include "connection.php";
-    $stmt = "SELECT stud_active_id, stud_name, course_name, session_name
-    FROM tbl_activescholars a 
-    INNER JOIN tbl_scholars b ON b.stud_id = a.stud_active_id
-    INNER JOIN tbl_course c ON c.course_id = b.stud_course_id
-    INNER JOIN tbl_academic_session d ON d.session_id = a.stud_active_academic_session_id";
+
+    $stmt = "SELECT a.stud_active_id, b.stud_name, c.course_name, d.session_name
+              FROM tbl_activescholars a
+              INNER JOIN tbl_scholars b ON b.stud_id = a.stud_active_id
+              INNER JOIN tbl_course c ON c.course_id = b.stud_course_id
+              INNER JOIN tbl_academic_session d ON d.session_id = a.stud_active_academic_session_id
+              LEFT JOIN tbl_assign_scholars e ON e.assign_stud_id = a.stud_active_id
+              WHERE e.assign_id IS NULL";  // Exclude already assigned students
+
     $stmt = $conn->prepare($stmt);
     $stmt->execute();
+
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : 0;
   }
+
 
   function getscholarship_type()
   {
