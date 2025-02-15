@@ -5,88 +5,64 @@ class User
 {
     function login($json)
     {
-        // {"username":"02-2223-08904","password":"IloveXena143"}
         include "connection.php";
         $json = json_decode($json, true);
 
         // Query for scholars
         $sqlScholars = "SELECT a.*, b.userLevel_name 
-        FROM tbl_scholars a
-        LEFT JOIN tbl_user_level b 
-            ON b.userLevel_privilege = a.stud_user_level
-        WHERE (a.stud_id = :username OR a.stud_email = :username) 
-        AND BINARY a.stud_password = :password";
+            FROM tbl_scholars a
+            LEFT JOIN tbl_user_level b 
+                ON b.userLevel_privilege = a.stud_user_level
+            WHERE (a.stud_id = :username OR a.stud_email = :username)";
 
         $stmtScholars = $conn->prepare($sqlScholars);
         $stmtScholars->bindParam(":username", $json["username"]);
-        $stmtScholars->bindParam(":password", $json["password"]);
         $stmtScholars->execute();
 
         if ($stmtScholars->rowCount() > 0) {
             $user = $stmtScholars->fetch(PDO::FETCH_ASSOC);
-            return json_encode([
-                "stud_id" => $user["stud_id"],
-                "stud_academic_session_id" => $user["stud_academic_session_id"],
-                "stud_name" => $user["stud_name"],
-                "stud_scholarship_id" => $user["stud_scholarship_id"],
-                "stud_department_id" => $user["stud_department_id"],
-                "stud_course_id" => $user["stud_course_id"],
-                "stud_year_id" => $user["stud_year_id"],
-                "stud_status_id" => $user["stud_status_id"],
-                "stud_percent_id" => $user["stud_percent_id"],
-                "stud_amount" => $user["stud_amount"],
-                "stud_applied_on_misc" => $user["stud_applied_on_misc"],
-                "stud_date" => $user["stud_date"],
-                "stud_modified_by" => $user["stud_modified_by"],
-                "stud_modified_date" => $user["stud_modified_date"],
-                "stud_password" => $user["stud_password"],
-                "stud_image_filename" => $user["stud_image_filename"],
-                "stud_contactNumber" => $user["stud_contactNumber"],
-                "stud_email" => $user["stud_email"],
-                "stud_user_level" => $user["userLevel_name"]
-            ]);
+
+            // Use password_verify to validate the password
+            if (password_verify($json["password"], $user["stud_password"])) {
+
+                // **New: Check if the password is the default (same as student ID)**
+                $isDefaultPassword = password_verify($user["stud_id"], $user["stud_password"]);
+
+                return json_encode([
+                    "stud_id" => $user["stud_id"],
+                    "stud_name" => $user["stud_name"],
+                    "stud_email" => $user["stud_email"],
+                    "stud_user_level" => $user["userLevel_name"],
+                    "is_default_password" => $isDefaultPassword  // **New flag**
+                ]);
+            }
         }
-        //{}
-        // $sql = "SELECT a.*, b.userLevel_name FROM tbl_admin a
-        // INNER JOIN tbl_user_level b ON b.userLevel_privilege = a.adm_user_level
-        // WHERE (adm_employee_id = :username OR adm_email = :username) AND BINARY adm_password = :password";
-        // $stmt = $conn->prepare($sql);
-        // $stmt->bindParam("username", $json["username"]);
-        // $stmt->bindParam("password", $json["password"]);
-        // $stmt->execute();
-        // if ($stmt->rowCount() > 0) {
-        //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
-        //     return json_encode([
-        //         "adm_id" => $user["adm_id"],
-        //         "adm_employee_id" => $user["adm_employee_id"],
-        //         "adm_password" => $user["adm_password"],
-        //         "adm_last_name" => $user["adm_last_name"],
-        //         "adm_first_name" => $user["adm_first_name"],
-        //         "adm_email" => $user["adm_email"],
-        //         "user_level" => $user["userLevel_name"],
-        //     ]);
-        // }
+
         // Query for supervisors
-        $sqlSupervisors = "SELECT * 
-         FROM tbl_supervisors_master 
-         WHERE (supM_id = :username OR supM_email = :username) 
-         AND BINARY supM_password = :password";
+        $sqlSupervisors = "SELECT * FROM tbl_supervisors_master WHERE (supM_id = :username OR supM_email = :username)";
 
         $stmtSupervisors = $conn->prepare($sqlSupervisors);
         $stmtSupervisors->bindParam(":username", $json["username"]);
-        $stmtSupervisors->bindParam(":password", $json["password"]);
         $stmtSupervisors->execute();
 
         if ($stmtSupervisors->rowCount() > 0) {
             $user = $stmtSupervisors->fetch(PDO::FETCH_ASSOC);
-            return json_encode([
-                "supM_id" => $user["supM_id"],
-                "supM_name" => $user["supM_name"],
-                "supM_password" => $user["supM_password"],
-                "supM_email" => $user["supM_email"],
-                "supM_image_filename" => $user["supM_image_filename"]
-            ]);
+
+            // Use password_verify to validate the password
+            if (password_verify($json["password"], $user["supM_password"])) {
+
+                // **New: Check if the password is the default (same as supervisor ID)**
+                $isDefaultPassword = password_verify($user["supM_id"], $user["supM_password"]);
+
+                return json_encode([
+                    "supM_id" => $user["supM_id"],
+                    "supM_name" => $user["supM_name"],
+                    "supM_email" => $user["supM_email"],
+                    "is_default_password" => $isDefaultPassword  // **New flag**
+                ]);
+            }
         }
+
         return 0;
     }
 
@@ -94,30 +70,40 @@ class User
     function adminLogin($json)
     {
         include "connection.php";
-        session_start();
+        // session_start();
 
+        // Decode JSON and validate input
         $json = json_decode($json, true);
+
+        // if (!isset($json["username"], $json["password"])) {
+        //     echo json_encode(["success" => false, "message" => "Missing credentials"]);
+        //     return;
+        // }
+
         $username = $json["username"];
         $password = $json["password"];
-        $captcha = $json["captcha"];
 
-        // Verify CAPTCHA
-        if (!isset($_SESSION["captcha"]) || strtolower($_SESSION["captcha"]) !== strtolower($captcha)) {
-            return "INVALID_CAPTCHA";
-        }
-
-        $sql = "SELECT * FROM tbl_admin WHERE BINARY adm_email = :username AND BINARY adm_password = :password";
+        $sql = "SELECT * FROM tbl_admin WHERE adm_email = :username AND BINARY adm_password = :password";
         $stmt = $conn->prepare($sql);
         $stmt->bindParam(":username", $username);
         $stmt->bindParam(":password", $password);
         $stmt->execute();
 
-        if ($stmt->rowCount() > 0) {
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        }
+        return $stmt->rowCount() > 0 ? $stmt->fetch(PDO::FETCH_ASSOC) : 0;
 
-        return 0;
+        // if ($stmt->rowCount() > 0) {
+        //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        //     // Verify hashed password
+        //     if (password_verify($password, $user["adm_password"])) {
+        //         return json_encode(["success" => true, "message" => "Login successful"]);
+        //     }
+        // }
+
+        // return json_encode(["failed" => false, "message" => "Invalid credentials"]);
     }
+
+
 
 
     function updateImage($json)
@@ -140,7 +126,7 @@ class User
                     break;
             }
 
-            $sql = "UPDATE tbl_admin SET adm_image = :image WHERE adm_id = :id";
+            $sql = "UPDATE tbl_admin SET adm_image_filename = :image WHERE adm_id = :id";
             $stmt = $conn->prepare($sql);
             $stmt->bindParam("image", $returnValueImage);
             $stmt->bindParam("id", $json["userId"]);
