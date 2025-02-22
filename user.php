@@ -70,37 +70,28 @@ class User
     function adminLogin($json)
     {
         include "connection.php";
-        // session_start();
 
-        // Decode JSON and validate input
         $json = json_decode($json, true);
 
-        // if (!isset($json["username"], $json["password"])) {
-        //     echo json_encode(["success" => false, "message" => "Missing credentials"]);
-        //     return;
-        // }
+        if (!isset($json["username"], $json["password"])) {
+            return json_encode(["success" => false, "message" => "Missing credentials"]);
+        }
 
         $username = $json["username"];
         $password = $json["password"];
 
-        $sql = "SELECT * FROM tbl_admin WHERE adm_email = :username AND BINARY adm_password = :password";
+        $sql = "SELECT * FROM tbl_admin WHERE adm_email = :username";
         $stmt = $conn->prepare($sql);
         $stmt->bindParam(":username", $username);
-        $stmt->bindParam(":password", $password);
         $stmt->execute();
 
-        return $stmt->rowCount() > 0 ? $stmt->fetch(PDO::FETCH_ASSOC) : 0;
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // if ($stmt->rowCount() > 0) {
-        //     $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user && password_verify($password, $user["adm_password"])) {
+            return json_encode(["success" => true, "message" => "Login successful"]);
+        }
 
-        //     // Verify hashed password
-        //     if (password_verify($password, $user["adm_password"])) {
-        //         return json_encode(["success" => true, "message" => "Login successful"]);
-        //     }
-        // }
-
-        // return json_encode(["failed" => false, "message" => "Invalid credentials"]);
+        return json_encode(["success" => false, "message" => "Invalid credentials"]);
     }
 
 

@@ -16,30 +16,47 @@ class User
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
   //UPDATED
-  function addadministrator($json)
+  function addAdministrator($json)
   {
     include "connection.php";
     $json = json_decode($json, true);
 
-    // Generate a password and hash it
-    $password = substr($json["adm_name"], 0, 2) . $json["adm_id"];
+    if (!isset($json["adm_name"], $json["adm_id"], $json["adm_email"])) {
+      return json_encode(["success" => false, "message" => "Missing required fields"]);
+    }
+
+    // Trim inputs to avoid accidental spaces
+    $adm_name = trim($json["adm_name"]);
+    $adm_id = trim($json["adm_id"]);
+    $adm_email = trim($json["adm_email"]);
+
+    // Set image filename to NULL if not provided
+    $adm_image_filename = isset($json["adm_image_filename"]) ? trim($json["adm_image_filename"]) : null;
+
+    // Generate a password using the first two letters of adm_name + adm_id
+    $password = substr($adm_name, 0, 2) . $adm_id;
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
 
+    // Default user level is 3 if not set
     $user_level = isset($json["adm_user_level"]) ? $json["adm_user_level"] : 3;
 
-    $sql = "INSERT INTO tbl_admin(adm_id, adm_name, adm_password, adm_email, adm_image_filename, adm_user_level) 
-              VALUES(:adm_id, :adm_name, :adm_password, :adm_email, :adm_image_filename, :adm_user_level)";
+    $sql = "INSERT INTO tbl_admin (adm_id, adm_name, adm_password, adm_email, adm_image_filename, adm_user_level) 
+              VALUES (:adm_id, :adm_name, :adm_password, :adm_email, :adm_image_filename, :adm_user_level)";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam(":adm_id", $json["adm_id"]);
-    $stmt->bindParam(":adm_name", $json["adm_name"]);
+    $stmt->bindParam(":adm_id", $adm_id);
+    $stmt->bindParam(":adm_name", $adm_name);
     $stmt->bindParam(":adm_password", $hashedPassword);
-    $stmt->bindParam(":adm_email", $json["adm_email"]);
-    $stmt->bindParam(":adm_image_filename", $json["adm_image_filename"]);
+    $stmt->bindParam(":adm_email", $adm_email);
+    $stmt->bindParam(":adm_image_filename", $adm_image_filename);
     $stmt->bindParam(":adm_user_level", $user_level);
 
-    $stmt->execute();
-    return $stmt->rowCount() > 0 ? 1 : 0;
+    if ($stmt->execute()) {
+      return json_encode(["success" => true, "message" => "Administrator added successfully", "generated_password" => $password]);
+    }
+
+    return json_encode(["success" => false, "message" => "Failed to add administrator"]);
   }
+
 
   function addDepartment($json)
   {
@@ -94,6 +111,105 @@ class User
   }
 
   function AddSubject($json)
+  {
+    include "connection.php";
+    $subjects = json_decode($json, true);
+    $conn->beginTransaction();
+
+    try {
+      foreach ($subjects as $subject) {
+        // Check if the subject already exists
+        $checkQuery = "SELECT * FROM tbl_subjects WHERE sub_code = :sub_code AND sub_section = :sub_section";
+        $checkStmt = $conn->prepare($checkQuery);
+        $checkStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
+        $checkStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
+        $checkStmt->execute();
+        $existingSubject = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingSubject) {
+          // Normalize values to avoid hidden spaces affecting comparison
+          foreach ($existingSubject as $key => $value) {
+            $existingSubject[$key] = trim((string) $value);
+          }
+          foreach ($subject as $key => $value) {
+            $subject[$key] = trim((string) $value);
+          }
+
+          // Debugging: Show existing and new data
+          echo "Existing Data: " . print_r($existingSubject, true);
+          echo "New Data: " . print_r($subject, true);
+
+          // Subject exists, update only if ANY field has changed
+          if (
+            $existingSubject["sub_time"] !== $subject["sub_time"] ||
+            $existingSubject["sub_time_rc"] !== $subject["sub_time_rc"] ||
+            $existingSubject["sub_descriptive_title"] !== $subject["sub_descriptive_title"] ||
+            $existingSubject["sub_day_f2f_id"] !== $subject["sub_day_f2f_id"] ||
+            $existingSubject["sub_day_rc_id"] !== $subject["sub_day_rc_id"] ||
+            $existingSubject["sub_room"] !== $subject["sub_room"]
+          ) {
+            // Update all necessary fields
+            $updateQuery = "UPDATE tbl_subjects SET 
+                                    sub_descriptive_title = :sub_descriptive_title,
+                                    sub_time = :sub_time, 
+                                    sub_time_rc = :sub_time_rc,
+                                    sub_day_f2f_id = :sub_day_f2f_id,
+                                    sub_day_rc_id = :sub_day_rc_id,
+                                    sub_room = :sub_room
+                                    WHERE sub_code = :sub_code AND sub_section = :sub_section";
+
+            $updateStmt = $conn->prepare($updateQuery);
+            $updateStmt->bindParam(":sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
+            $updateStmt->bindParam(":sub_time", $subject["sub_time"], PDO::PARAM_STR);
+            $updateStmt->bindParam(":sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
+            $updateStmt->bindParam(":sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
+            $updateStmt->bindParam(":sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
+            $updateStmt->bindParam(":sub_room", $subject["sub_room"], PDO::PARAM_STR);
+            $updateStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
+            $updateStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
+            $updateStmt->execute();
+
+            // Debugging: Check if update was successful
+            if ($updateStmt->rowCount() > 0) {
+              echo "Updated subject: " . $subject["sub_code"] . " - " . $subject["sub_section"] . "\n";
+            } else {
+              echo "No update was performed for subject: " . $subject["sub_code"] . "\n";
+            }
+          }
+        } else {
+          // Insert new subject
+          $insertQuery = "INSERT INTO tbl_subjects(sub_code, sub_descriptive_title, sub_section, 
+                              sub_day_f2f_id, sub_time, sub_day_rc_id, sub_time_rc, sub_room)
+                              VALUES(:sub_code, :sub_descriptive_title, :sub_section, :sub_day_f2f_id, :sub_time,
+                              :sub_day_rc_id, :sub_time_rc, :sub_room)";
+
+          $insertStmt = $conn->prepare($insertQuery);
+          $insertStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
+          $insertStmt->bindParam(":sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
+          $insertStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
+          $insertStmt->bindParam(":sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
+          $insertStmt->bindParam(":sub_time", $subject["sub_time"], PDO::PARAM_STR);
+          $insertStmt->bindParam(":sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
+          $insertStmt->bindParam(":sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
+          $insertStmt->bindParam(":sub_room", $subject["sub_room"], PDO::PARAM_STR);
+          $insertStmt->execute();
+
+          echo "Inserted new subject: " . $subject["sub_code"] . "\n";
+        }
+      }
+
+      $conn->commit();
+      return 1;
+    } catch (Exception $e) {
+      $conn->rollBack();
+      echo "Error: " . $e->getMessage();
+      return 0;
+    }
+  }
+
+
+
+  function AddSubject1($json)
   {
     //{"subject_code":"ITE 103", "subject_name": "Quantitative Reasoning"}
     include "connection.php";
@@ -230,7 +346,7 @@ class User
 
       foreach ($json as $student) {
         // Generate hashed password
-        $password = password_hash($student["stud_id"] . "123", PASSWORD_BCRYPT);
+        $password = password_hash($student["stud_id"], PASSWORD_BCRYPT);
 
         // Bind parameters for tbl_scholars
         $stmt1->bindParam(":stud_id", $student["stud_id"]);
@@ -314,11 +430,11 @@ class User
     //{"room_number":"103", "room_building_id":1}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_room(room_name, room_build_id)
-    VALUES(:room_name, :room_build_id)";
+    $sql = "INSERT INTO tbl_room(room_name)
+    VALUES(:room_name)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("room_name", $json["room_name"]);
-    $stmt->bindParam("room_build_id", $json["room_build_id"]);
+    // $stmt->bindParam("room_build_id", $json["room_build_id"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -352,18 +468,18 @@ class User
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
-  function AddOfficeType($json)
-  {
-    include "connection.php";
-    $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_office_type(off_name, off_building_id)
-    VALUES(:off_name, :off_building_id)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bindParam("off_name", $json["off_name"]);
-    $stmt->bindParam("off_building_id", $json["off_building_id"]);
-    $stmt->execute();
-    return $stmt->rowCount() > 0 ? 1 : 0;
-  }
+  // function AddOfficeType($json)
+  // {
+  //   include "connection.php";
+  //   $json = json_decode($json, true);
+  //   $sql = "INSERT INTO tbl_office_type(off_name, off_building_id)
+  //   VALUES(:off_name, :off_building_id)";
+  //   $stmt = $conn->prepare($sql);
+  //   $stmt->bindParam("off_name", $json["off_name"]);
+  //   $stmt->bindParam("off_building_id", $json["off_building_id"]);
+  //   $stmt->execute();
+  //   return $stmt->rowCount() > 0 ? 1 : 0;
+  // }
   function AddModality($json)
   {
     include "connection.php";
@@ -394,10 +510,11 @@ class User
     //{"supM_employee_id": "1", "supM_first_name": "david", "supM_last_name": "gabonada", "supM_middle_name": "candelasa", "supM_department_id": "4", "supM_email": "gabonada@gmail", "supM_contact_number": "02221"}
     include "connection.php";
     $json = json_decode($json, true);
-    $password = $json["supM_name"];
-    $sql = "INSERT INTO tbl_supervisors_master(supM_name, supM_password, supM_email, supM_image_filename)
-    VALUES (:supM_name, :supM_password, :supM_email, :supM_image_filename)";
+    $password = password_hash($json["supM_id"], PASSWORD_DEFAULT);
+    $sql = "INSERT INTO tbl_supervisors_master(supM_id, supM_name, supM_password, supM_email, supM_image_filename)
+    VALUES (:supM_id, :supM_name, :supM_password, :supM_email, :supM_image_filename)";
     $stmt = $conn->prepare($sql);
+    $stmt->bindParam("supM_id", $json["supM_id"]);
     $stmt->bindParam("supM_name", $json["supM_name"]);
     $stmt->bindParam("supM_password", $password);
     $stmt->bindParam("supM_email", $json["supM_email"]);
@@ -786,7 +903,7 @@ class User
   function getSubjectMaster()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_subject_master";
+    $sql = "SELECT * FROM tbl_subject";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -1572,11 +1689,13 @@ switch ($operation) {
   case "AddPercentStype":
     echo $user->AddPercentStype($json);
     break;
+    // case "AddBatchSubject":
+    //   echo $user->AddBatchSubject($json);
+    //   break;
   case "AddSubject":
     echo $user->AddSubject($json);
-    break;
-  case "AddOfficeType":
-    echo $user->AddOfficeType($json);
+    // case "AddOfficeType":
+    //   echo $user->AddOfficeType($json);
     break;
   case "AddModality":
     echo $user->AddModality($json);
