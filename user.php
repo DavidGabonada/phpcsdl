@@ -80,18 +80,22 @@ class User
         $username = $json["username"];
         $password = $json["password"];
 
-        $sql = "SELECT * FROM tbl_admin WHERE adm_email = :username";
+        $sql = "SELECT * FROM tbl_admin WHERE adm_email = :username AND BINARY adm_password = :password";
         $stmt = $conn->prepare($sql);
         $stmt->bindParam(":username", $username);
+        $stmt->bindParam(":password", $password);
         $stmt->execute();
 
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $stmt->rowCount() > 0 ? $stmt->fetch(PDO::FETCH_ASSOC) : 0;
 
-        if ($user && password_verify($password, $user["adm_password"])) {
-            return json_encode(["success" => true, "message" => "Login successful"]);
-        }
+        // $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return json_encode(["success" => false, "message" => "Invalid credentials"]);
+
+        // if ($user && password_verify($password, $user["adm_password"])) {
+        //     return json_encode(["success" => true, "message" => "Login successful"]);
+        // }
+
+        // return json_encode(["success" => false, "message" => "Invalid credentials"]);
     }
 
 

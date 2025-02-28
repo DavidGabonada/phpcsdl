@@ -2,7 +2,7 @@
 $host = 'localhost';
 $dbname = 'db_finalhk';
 $user = 'root';
-$pass = 'CSDL12345';
+$pass = '';
 
 try {
     $conn = new PDO("mysql:host=$host;dbname=$dbname", $user, $pass);

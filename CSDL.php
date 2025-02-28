@@ -98,17 +98,43 @@ class User
   }
   function addScholarshipType($json)
   {
-    // {"type_name":"bea"}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_scholarship_type(type_name, type_percent_id)
-    VALUES(:type_name, type_percent_id)";
+
+    if (!isset($json[0])) {
+      // Convert single entry to an array for uniform processing
+      $json = [$json];
+    }
+
+    $sql = "INSERT INTO tbl_scholarship_type(type_name, type_percent_id) 
+              VALUES(:type_name, :type_percent_id)";
     $stmt = $conn->prepare($sql);
-    $stmt->bindParam("type_name", $json["type_name"]);
-    $stmt->bindParam("type_percent_id", $json["type_percent_id"]);
-    $stmt->execute();
-    return $stmt->rowCount() > 0 ? 1 : 0;
+
+    $checkSql = "SELECT COUNT(*) FROM tbl_scholarship_type WHERE type_name = :type_name";
+    $checkStmt = $conn->prepare($checkSql);
+
+    $successCount = 0;
+
+    foreach ($json as $item) {
+      // Check if the type_name already exists
+      $checkStmt->bindParam(":type_name", $item["type_name"]);
+      $checkStmt->execute();
+      $exists = $checkStmt->fetchColumn();
+
+      if ($exists == 0) { // Insert only if it doesn't exist
+        $stmt->bindParam(":type_name", $item["type_name"]);
+        $stmt->bindParam(":type_percent_id", $item["type_percent_id"]);
+        $stmt->execute();
+
+        if ($stmt->rowCount() > 0) {
+          $successCount++;
+        }
+      }
+    }
+
+    return $successCount;
   }
+
 
   function AddSubject($json)
   {
@@ -208,39 +234,91 @@ class User
   }
 
 
-
-  function AddSubject1($json)
+  function AddSubjectOne($json)
   {
-    //{"subject_code":"ITE 103", "subject_name": "Quantitative Reasoning"}
     include "connection.php";
     $subject = json_decode($json, true);
-    $sql = "INSERT INTO tbl_subjects(sub_code, sub_descriptive_title, sub_section, sub_day_f2f_id, 
-    sub_time, sub_day_rc_id, sub_time_rc, sub_room)
-    VALUES(:sub_code, :sub_descriptive_title, :sub_section, :sub_day_f2f_id, :sub_time,
-     :sub_day_rc_id, :sub_time_rc, :sub_room)";
-    $stmt = $conn->prepare($sql);
+    $conn->beginTransaction();
+    // echo "Subject ko to" . json_encode($subject);
+    // die();
+    try {
+      // Check if the subject already exists
+      $checkQuery = "SELECT * FROM tbl_subjects WHERE sub_code = :sub_code AND sub_section = :sub_section";
+      $checkStmt = $conn->prepare($checkQuery);
+      $checkStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
+      $checkStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
+      $checkStmt->execute();
+      $existingSubject = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-    foreach ($subject as $subject) {
-      try {
+      if ($existingSubject) {
+        // Normalize values to avoid hidden spaces affecting comparison
+        foreach ($existingSubject as $key => $value) {
+          $existingSubject[$key] = trim((string) $value);
+        }
+        foreach ($subject as $key => $value) {
+          $subject[$key] = trim((string) $value);
+        }
 
-        $stmt->bindParam("sub_code", $subject["sub_code"], PDO::PARAM_STR);
-        $stmt->bindParam("sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
-        $stmt->bindParam("sub_section", $subject["sub_section"], PDO::PARAM_STR);
-        $stmt->bindParam("sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
-        $stmt->bindParam("sub_time", $subject["sub_time"], PDO::PARAM_STR);
-        $stmt->bindParam("sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
-        $stmt->bindParam("sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
-        $stmt->bindParam("sub_room", $subject["sub_room"], PDO::PARAM_STR);
-        // $stmt->bindParam("sub_supM_id", $subject["sub_supM_id"], PDO::PARAM_INT);
-        // $stmt->bindParam("sub_learning_modalities_id", $subject["sub_learning_modalities_id"], PDO::PARAM_INT);
-        // $stmt->bindParam("sub_limit", $subject["sub_limit"], PDO::PARAM_INT);
-        $stmt->execute();
-      } catch (Exception $e) {
-        return $e;
+        // Check if any field has changed
+        if (
+          $existingSubject["sub_time"] !== $subject["sub_time"] ||
+          $existingSubject["sub_time_rc"] !== $subject["sub_time_rc"] ||
+          $existingSubject["sub_descriptive_title"] !== $subject["sub_descriptive_title"] ||
+          $existingSubject["sub_day_f2f_id"] !== $subject["sub_day_f2f_id"] ||
+          $existingSubject["sub_day_rc_id"] !== $subject["sub_day_rc_id"] ||
+          $existingSubject["sub_room"] !== $subject["sub_room"] ||
+          $existingSubject["sub_supM_id"] !== $subject["sub_supM_id"]
+        ) {
+          // Update all necessary fields
+          $updateQuery = "UPDATE tbl_subjects SET 
+                                        sub_descriptive_title = :sub_descriptive_title,
+                                        sub_time = :sub_time, 
+                                        sub_time_rc = :sub_time_rc,
+                                        sub_day_f2f_id = :sub_day_f2f_id,
+                                        sub_day_rc_id = :sub_day_rc_id,
+                                        sub_room = :sub_room,
+                                        sub_supM_id = :sub_supM_id
+                                    WHERE sub_code = :sub_code AND sub_section = :sub_section";
+
+          $updateStmt = $conn->prepare($updateQuery);
+          $updateStmt->bindParam(":sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
+          $updateStmt->bindParam(":sub_time", $subject["sub_time"], PDO::PARAM_STR);
+          $updateStmt->bindParam(":sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
+          $updateStmt->bindParam(":sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
+          $updateStmt->bindParam(":sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
+          $updateStmt->bindParam(":sub_room", $subject["sub_room"], PDO::PARAM_STR);
+          $updateStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
+          $updateStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
+          $updateStmt->bindParam(":sub_supM_id", $subject["sub_supM_id"], PDO::PARAM_STR);
+          $updateStmt->execute();
+        }
+      } else {
+        // Insert new subject
+        $insertQuery = "INSERT INTO tbl_subjects(sub_code, sub_descriptive_title, sub_section, 
+                                      sub_day_f2f_id, sub_time, sub_day_rc_id, sub_time_rc, sub_room, sub_supM_id)
+                                  VALUES(:sub_code, :sub_descriptive_title, :sub_section, :sub_day_f2f_id, :sub_time,
+                                      :sub_day_rc_id, :sub_time_rc, :sub_room, :sub_supM_id)";
+
+        $insertStmt = $conn->prepare($insertQuery);
+        $insertStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
+        $insertStmt->bindParam(":sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
+        $insertStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
+        $insertStmt->bindParam(":sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
+        $insertStmt->bindParam(":sub_time", $subject["sub_time"], PDO::PARAM_STR);
+        $insertStmt->bindParam(":sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
+        $insertStmt->bindParam(":sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
+        $insertStmt->bindParam(":sub_room", $subject["sub_room"], PDO::PARAM_STR);
+        $insertStmt->bindParam(":sub_supM_id", $subject["sub_supM_id"], PDO::PARAM_STR);
+        $insertStmt->execute();
       }
-    }
 
-    return 1;
+      $conn->commit();
+      return 1;
+    } catch (Exception $e) {
+      $conn->rollBack();
+      echo "Error: " . $e->getMessage();
+      return 0;
+    }
   }
   function AddScholar($json)
   {
@@ -277,6 +355,7 @@ class User
         $stmt->bindParam(":stud_department_id", $student["stud_department_id"], PDO::PARAM_INT);
         $stmt->bindParam(":stud_course_id", $student["stud_course_id"], PDO::PARAM_INT);
         $stmt->bindParam(":stud_year_id", $student["stud_year_id"], PDO::PARAM_INT);
+        $stmt->bindParam(":stud_password", $student["stud_password"], PDO::PARAM_STR);
         $stmt->bindParam(":stud_status_id", $student["stud_status_id"], PDO::PARAM_INT);
         $stmt->bindParam(":stud_percent_id", $student["stud_percent_id"], PDO::PARAM_INT);
         $stmt->bindParam(":stud_amount", $student["stud_amount"], PDO::PARAM_INT);
@@ -724,10 +803,12 @@ class User
   {
     include "connection.php";
     $sql = "SELECT b.stud_active_id, a.stud_name, c.session_name
-    FROM tbl_scholars a
-    INNER JOIN tbl_activescholars b ON b.stud_active_id= a.stud_id
-    LEFT JOIN tbl_academic_session c ON b.stud_active_academic_session_id = c.session_id;
-";
+              FROM tbl_scholars a
+              INNER JOIN tbl_activescholars b ON b.stud_active_id = a.stud_id
+              LEFT JOIN tbl_academic_session c ON b.stud_active_academic_session_id = c.session_id
+              LEFT JOIN tbl_assign_scholars e ON e.assign_stud_id = b.stud_active_id
+              WHERE e.assign_id IS NULL";
+
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -885,8 +966,14 @@ class User
     $returnValue = [];
     $returnValue["getDutyHours"] = $this->getDutyHours();
     $returnValue["scholarshipType"] = $this->getscholarship_type();
+    $returnValue["subject"] = $this->getSubjectMaster();
+    $returnValue["day"] = $this->getDays();
+    $returnValue["supervisor"] = $this->getSupervisorMaster();
+    $returnValue["room"] = $this->getRoom();
+
     return json_encode($returnValue);
   }
+
   function getDepartmentMaster()
   {
     include "connection.php";
@@ -903,7 +990,7 @@ class User
   function getSubjectMaster()
   {
     include "connection.php";
-    $sql = "SELECT * FROM tbl_subject";
+    $sql = "SELECT * FROM tbl_subjects";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -935,6 +1022,9 @@ class User
     $returnValue["yearLevel"] = $this->getSchoolYearLevel();
     $returnValue["course"] = $this->getcourse();
     $returnValue["scholarshipType"] = $this->getscholarship_type();
+    $returnValue["scholarshipSub"] = $this->getPercentStype();
+    $returnValue["department"] = $this->getDepartment();
+    $returnValue["year"] = $this->getschoolyear();
     // $returnValue["scholarshipSub"] = $this->getSubType();
     // $returnValue["modality"] = $this->getModality();
     return json_encode($returnValue);
@@ -1689,9 +1779,9 @@ switch ($operation) {
   case "AddPercentStype":
     echo $user->AddPercentStype($json);
     break;
-    // case "AddBatchSubject":
-    //   echo $user->AddBatchSubject($json);
-    //   break;
+  case "AddSubjectOne":
+    echo json_encode($user->AddSubjectOne($json));
+    break;
   case "AddSubject":
     echo $user->AddSubject($json);
     // case "AddOfficeType":
@@ -1758,7 +1848,7 @@ switch ($operation) {
     echo $user->getadminList();
     break;
   case "getCourseList":
-    echo $user->getCourseList();
+    echo json_decode($user->getCourseList());
     break;
   case "getScholarlist":
     echo $user->getScholarlist();
