@@ -63,10 +63,11 @@ class User
     //{"dept_name":"bea"}
     include "connection.php";
     $json = json_decode($json, true);
-    $sql = "INSERT INTO tbl_department(dept_name)
-    VALUES(:dept_name)";
+    $sql = "INSERT INTO tbl_department(dept_name, dept_build_id)
+    VALUES(:dept_name, :dept_build_id)";
     $stmt = $conn->prepare($sql);
     $stmt->bindParam("dept_name", $json["dept_name"]);
+    $stmt->bindParam("dept_build_id", $json["dept_build_id"]);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? 1 : 0;
   }
@@ -235,82 +236,117 @@ class User
 
 
   function AddSubjectOne($json)
+
   {
     include "connection.php";
     $subject = json_decode($json, true);
     $conn->beginTransaction();
-    // echo "Subject ko to" . json_encode($subject);
-    // die();
+
     try {
-      // Check if the subject already exists
-      $checkQuery = "SELECT * FROM tbl_subjects WHERE sub_code = :sub_code AND sub_section = :sub_section";
-      $checkStmt = $conn->prepare($checkQuery);
-      $checkStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
-      $checkStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
-      $checkStmt->execute();
-      $existingSubject = $checkStmt->fetch(PDO::FETCH_ASSOC);
+      // Insert new subject, ignoring duplicates
+      $insertQuery = "INSERT IGNORE INTO tbl_subjects (
+                              sub_code, sub_descriptive_title, sub_section, 
+                              sub_day_f2f_id, sub_time, sub_day_rc_id, sub_time_rc, sub_room, sub_supM_id
+                          ) VALUES (
+                              :sub_code, :sub_descriptive_title, :sub_section, 
+                              :sub_day_f2f_id, :sub_time, :sub_day_rc_id, :sub_time_rc, :sub_room, :sub_supM_id
+                          )";
 
-      if ($existingSubject) {
-        // Normalize values to avoid hidden spaces affecting comparison
-        foreach ($existingSubject as $key => $value) {
-          $existingSubject[$key] = trim((string) $value);
-        }
-        foreach ($subject as $key => $value) {
-          $subject[$key] = trim((string) $value);
-        }
+      $insertStmt = $conn->prepare($insertQuery);
+      $insertStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
+      $insertStmt->bindParam(":sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
+      $insertStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
+      $insertStmt->bindParam(":sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
+      $insertStmt->bindParam(":sub_time", $subject["sub_time"], PDO::PARAM_STR);
+      $insertStmt->bindParam(":sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
+      $insertStmt->bindParam(":sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
+      $insertStmt->bindParam(":sub_room", $subject["sub_room"], PDO::PARAM_STR);
+      $insertStmt->bindParam(":sub_supM_id", $subject["sub_supM_id"], PDO::PARAM_STR);
+      $insertStmt->execute();
 
-        // Check if any field has changed
-        if (
-          $existingSubject["sub_time"] !== $subject["sub_time"] ||
-          $existingSubject["sub_time_rc"] !== $subject["sub_time_rc"] ||
-          $existingSubject["sub_descriptive_title"] !== $subject["sub_descriptive_title"] ||
-          $existingSubject["sub_day_f2f_id"] !== $subject["sub_day_f2f_id"] ||
-          $existingSubject["sub_day_rc_id"] !== $subject["sub_day_rc_id"] ||
-          $existingSubject["sub_room"] !== $subject["sub_room"] ||
-          $existingSubject["sub_supM_id"] !== $subject["sub_supM_id"]
-        ) {
-          // Update all necessary fields
-          $updateQuery = "UPDATE tbl_subjects SET 
-                                        sub_descriptive_title = :sub_descriptive_title,
-                                        sub_time = :sub_time, 
-                                        sub_time_rc = :sub_time_rc,
-                                        sub_day_f2f_id = :sub_day_f2f_id,
-                                        sub_day_rc_id = :sub_day_rc_id,
-                                        sub_room = :sub_room,
-                                        sub_supM_id = :sub_supM_id
-                                    WHERE sub_code = :sub_code AND sub_section = :sub_section";
+      $conn->commit();
+      return $insertStmt->rowCount() > 0 ? 1 : 0; // Success
+    } catch (Exception $e) {
+      $conn->rollBack();
+      echo "Error: " . $e->getMessage();
+      return -1; // Failure
+    }
+  }
 
-          $updateStmt = $conn->prepare($updateQuery);
-          $updateStmt->bindParam(":sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
-          $updateStmt->bindParam(":sub_time", $subject["sub_time"], PDO::PARAM_STR);
-          $updateStmt->bindParam(":sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
-          $updateStmt->bindParam(":sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
-          $updateStmt->bindParam(":sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
-          $updateStmt->bindParam(":sub_room", $subject["sub_room"], PDO::PARAM_STR);
-          $updateStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
-          $updateStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
-          $updateStmt->bindParam(":sub_supM_id", $subject["sub_supM_id"], PDO::PARAM_STR);
-          $updateStmt->execute();
-        }
-      } else {
-        // Insert new subject
-        $insertQuery = "INSERT INTO tbl_subjects(sub_code, sub_descriptive_title, sub_section, 
-                                      sub_day_f2f_id, sub_time, sub_day_rc_id, sub_time_rc, sub_room, sub_supM_id)
-                                  VALUES(:sub_code, :sub_descriptive_title, :sub_section, :sub_day_f2f_id, :sub_time,
-                                      :sub_day_rc_id, :sub_time_rc, :sub_room, :sub_supM_id)";
 
-        $insertStmt = $conn->prepare($insertQuery);
-        $insertStmt->bindParam(":sub_code", $subject["sub_code"], PDO::PARAM_STR);
-        $insertStmt->bindParam(":sub_descriptive_title", $subject["sub_descriptive_title"], PDO::PARAM_STR);
-        $insertStmt->bindParam(":sub_section", $subject["sub_section"], PDO::PARAM_STR);
-        $insertStmt->bindParam(":sub_day_f2f_id", $subject["sub_day_f2f_id"], PDO::PARAM_INT);
-        $insertStmt->bindParam(":sub_time", $subject["sub_time"], PDO::PARAM_STR);
-        $insertStmt->bindParam(":sub_day_rc_id", $subject["sub_day_rc_id"], PDO::PARAM_INT);
-        $insertStmt->bindParam(":sub_time_rc", $subject["sub_time_rc"], PDO::PARAM_STR);
-        $insertStmt->bindParam(":sub_room", $subject["sub_room"], PDO::PARAM_STR);
-        $insertStmt->bindParam(":sub_supM_id", $subject["sub_supM_id"], PDO::PARAM_STR);
-        $insertStmt->execute();
-      }
+
+  function AddScholar($json)
+
+  {
+    include "connection.php";
+
+    $student = json_decode($json, true);
+    $conn->beginTransaction();
+
+    try {
+      // SQL for tbl_scholars (insert or update only new data)
+      $sql1 = "INSERT INTO tbl_scholars (
+                          stud_id, stud_name, stud_scholarship_id, stud_department_id, stud_course_id, 
+                          stud_password, stud_image_filename, stud_contactNumber, stud_email, stud_user_level
+                      ) VALUES (
+                          :stud_id, :stud_name, :stud_scholarship_id, :stud_department_id, :stud_course_id, 
+                          :stud_password, :stud_image_filename, :stud_contactNumber, :stud_email, 1
+                      ) ON DUPLICATE KEY UPDATE 
+                          stud_name = VALUES(stud_name),
+                          stud_scholarship_id = VALUES(stud_scholarship_id),
+                          stud_department_id = VALUES(stud_department_id),
+                          stud_course_id = VALUES(stud_course_id),
+                          stud_password = VALUES(stud_password),
+                          stud_image_filename = VALUES(stud_image_filename),
+                          stud_contactNumber = VALUES(stud_contactNumber),
+                          stud_email = VALUES(stud_email)";
+
+      $stmt1 = $conn->prepare($sql1);
+
+      // Generate hashed password
+      $password = password_hash($student["stud_id"], PASSWORD_BCRYPT);
+
+      // Bind parameters for tbl_scholars
+      $stmt1->bindParam(":stud_id", $student["stud_id"]);
+      $stmt1->bindParam(":stud_name", $student["stud_name"]);
+      $stmt1->bindParam(":stud_scholarship_id", $student["stud_scholarship_id"]);
+      $stmt1->bindParam(":stud_department_id", $student["stud_department_id"]);
+      $stmt1->bindParam(":stud_course_id", $student["stud_course_id"]);
+      $stmt1->bindParam(":stud_password", $password);
+      $stmt1->bindParam(":stud_image_filename", $student["stud_image_file"]);
+      $stmt1->bindParam(":stud_contactNumber", $student["stud_contactNumber"]);
+      $stmt1->bindParam(":stud_email", $student["stud_email"]);
+      $stmt1->execute();
+
+      // SQL for tbl_activescholars (update existing records without modifying stud_active_id)
+      $sql2 = "UPDATE tbl_activescholars SET 
+                          stud_active_academic_session_id = :stud_active_academic_session_id,
+                          stud_active_year_id = :stud_active_year_id,
+                          stud_active_status_id = :stud_active_status_id,
+                          stud_active_percent_id = :stud_active_percent_id,
+                          stud_active_amount = :stud_active_amount,
+                          stud_active_applied_on_tuition = :stud_active_applied_on_tuition,
+                          stud_active_applied_on_misc = :stud_active_applied_on_misc,
+                          stud_date = :stud_date,
+                          stud_modified_by = :stud_modified_by,
+                          stud_modified_date = :stud_modified_date
+                      WHERE stud_active_id = :stud_active_id";
+
+      $stmt2 = $conn->prepare($sql2);
+
+      // Bind parameters for tbl_activescholars (update only, no insert)
+      $stmt2->bindParam(":stud_active_id", $student["stud_id"]);
+      $stmt2->bindParam(":stud_active_academic_session_id", $student["stud_active_academic_session_id"]);
+      $stmt2->bindParam(":stud_active_year_id", $student["stud_active_year_id"]);
+      $stmt2->bindParam(":stud_active_status_id", $student["stud_status_id"]);
+      $stmt2->bindParam(":stud_active_percent_id", $student["stud_active_percent_id"]);
+      $stmt2->bindParam(":stud_active_amount", $student["stud_active_amount"]);
+      $stmt2->bindParam(":stud_active_applied_on_tuition", $student["stud_active_applied_on_tuition"]);
+      $stmt2->bindParam(":stud_active_applied_on_misc", $student["stud_active_applied_on_misc"]);
+      $stmt2->bindParam(":stud_date", $student["stud_date"]);
+      $stmt2->bindParam(":stud_modified_by", $student["stud_modified_by"]);
+      $stmt2->bindParam(":stud_modified_date", $student["stud_modified_date"]);
+      $stmt2->execute();
 
       $conn->commit();
       return 1;
@@ -320,65 +356,6 @@ class User
       return 0;
     }
   }
-  function AddScholar($json)
-  {
-    include "connection.php";
-    $students = json_decode($json, true);
-
-    // Correct SQL query
-    $sql = "INSERT INTO tbl_scholars(
-          stud_id, stud_academic_session_id, stud_name, stud_scholarship_id, 
-          stud_department_id, stud_course_id, stud_year_id, stud_status_id, 
-          stud_percent_id, stud_amount, stud_applied_on_tuition, stud_applied_on_misc, 
-          stud_date, stud_modified_by, stud_modified_date, stud_password, 
-          stud_image_filename, stud_contactNumber, stud_email
-      ) VALUES (
-          :stud_id, :stud_academic_session_id, :stud_name, :stud_scholarship_id, 
-          :stud_department_id, :stud_course_id, :stud_year_id, :stud_status_id, 
-          :stud_percent_id, :stud_amount, :stud_applied_on_tuition, :stud_applied_on_misc, 
-          :stud_date, :stud_modified_by, :stud_modified_date, :stud_password, 
-          :stud_image_filename, :stud_contactNumber, :stud_email
-      )";
-
-    // Prepare statement
-    $stmt = $conn->prepare($sql);
-
-    foreach ($students as $student) {
-      try {
-        // Generate password
-        $password = $student["stud_id"] . "123";
-        // Bind parameters
-        $stmt->bindParam(":stud_id", $student["stud_id"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_academic_session_id", $student["stud_academic_session_id"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_name", $student["stud_name"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_scholarship_id", $student["stud_scholarship_id"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_department_id", $student["stud_department_id"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_course_id", $student["stud_course_id"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_year_id", $student["stud_year_id"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_password", $student["stud_password"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_status_id", $student["stud_status_id"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_percent_id", $student["stud_percent_id"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_amount", $student["stud_amount"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_applied_on_tuition", $student["stud_applied_on_tuition"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_applied_on_misc", $student["stud_applied_on_misc"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_date", $student["stud_date"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_modified_by", $student["stud_modified_by"], PDO::PARAM_INT);
-        $stmt->bindParam(":stud_modified_date", $student["stud_modified_date"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_password", $password, PDO::PARAM_STR);
-        $stmt->bindParam(":stud_image_filename", $student["stud_image_filename"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_contactNumber", $student["stud_contactNumber"], PDO::PARAM_STR);
-        $stmt->bindParam(":stud_email", $student["stud_email"], PDO::PARAM_STR);
-
-        // Execute statement
-        $stmt->execute();
-      } catch (Exception $e) {
-        return 0;
-      }
-    }
-
-    return 1;
-  }
-
 
   function AddScholarBatch($json)
   {
@@ -386,6 +363,7 @@ class User
 
     $json = json_decode($json, true);
     $conn->beginTransaction();
+    // $image = 'noimage.png';
 
     try {
       // SQL for tbl_scholars (insert or update only new data)
@@ -406,6 +384,7 @@ class User
                             stud_email = VALUES(stud_email)";
 
       $stmt1 = $conn->prepare($sql1);
+      // $stmt1->bindParam(':noimage',$image);
 
       // SQL for tbl_activescholars (update existing records without modifying stud_active_id)
       $sql2 = "UPDATE tbl_activescholars SET 
@@ -1734,9 +1713,9 @@ $json = isset($_POST["json"]) ? $_POST["json"] : "0";
 $operation = isset($_POST["operation"]) ? $_POST["operation"] : "0";
 $user = new User();
 switch ($operation) {
-    // case "login":
-    //   echo $user->login($json);
-    //   break;
+  // case "login":
+  //   echo $user->login($json);
+  //   break;
   case "AddAcademicSession":
     echo $user->AddAcademicSession($json);
     break;
@@ -1841,14 +1820,14 @@ switch ($operation) {
   case "getSupervisorMaster":
     echo json_encode($user->getSupervisorMaster());
     break;
-    // case "getScholarshipSubType":
-    //   echo $user->getScholarshipSubType();
-    //   break;
+  // case "getScholarshipSubType":
+  //   echo $user->getScholarshipSubType();
+  //   break;
   case "getAdminList":
     echo $user->getadminList();
     break;
   case "getCourseList":
-    echo json_decode($user->getCourseList());
+    echo json_encode($user->getCourseList());
     break;
   case "getScholarlist":
     echo $user->getScholarlist();
@@ -1880,9 +1859,9 @@ switch ($operation) {
   case "getTimeList":
     echo $user->getTimeList();
     break;
-    // case "getSubType":
-    //   echo $user->getSubType();
-    //   break;
+  // case "getSubType":
+  //   echo $user->getSubType();
+  //   break;
   case "getSchoolYearLevel":
     echo json_encode($user->getSchoolYearLevel());
     break;
@@ -1928,9 +1907,9 @@ switch ($operation) {
   case "getDutyAssign":
     echo $user->getDutyAssign();
     break;
-    // case "getModality":
-    //   echo json_encode($user->getModality());
-    //   break;
+  // case "getModality":
+  //   echo json_encode($user->getModality());
+  //   break;
   case "getAllList":
     echo $user->getAllList();
     break;
