@@ -105,33 +105,58 @@ class User
     {
         try {
             include "connection.php";
+
             $json = json_decode($json, true);
-            $returnValueImage = $this->uploadImage();
-            switch ($returnValueImage) {
-                case 2:
-                    // You cannot Upload files of this type!
-                    return 2;
-                case 3:
-                    // There was an error uploading your file!
-                    return 3;
-                case 4:
-                    // Your file is too big (25mb maximum)
-                    return 4;
-                default:
-                    break;
+
+            // Check if JSON is valid
+            if (!$json) {
+                echo json_encode(["error" => "Invalid JSON data"]);
+                exit();
             }
 
+            // Upload Image
+            $returnValueImage = $this->uploadImage();
+
+            // Check for upload errors
+            if (in_array($returnValueImage, [2, 3, 4])) {
+                $errorMessages = [
+                    2 => "Invalid file type (Allowed: JPG, JPEG, PNG, GIF, WEBP)",
+                    3 => "Error uploading the file",
+                    4 => "File is too large (Max: 25MB)"
+                ];
+                echo json_encode(["error" => $errorMessages[$returnValueImage]]);
+                exit();
+            }
+
+            // Ensure an image was uploaded successfully
+            if (empty($returnValueImage)) {
+                echo json_encode(["error" => "No image uploaded"]);
+                exit();
+            }
+
+            // echo "reetrum mvaue " . $returnValueImage;
+            // die();
+
+            // Update image filename in DB
             $sql = "UPDATE tbl_admin SET adm_image_filename = :image WHERE adm_id = :id";
             $stmt = $conn->prepare($sql);
-            $stmt->bindParam("image", $returnValueImage);
-            $stmt->bindParam("id", $json["userId"]);
+            $stmt->bindParam(":image", $returnValueImage);
+            $stmt->bindParam(":id", $json["userId"]);
             $stmt->execute();
             return $stmt->rowCount() > 0 ? $returnValueImage : 0;
+            // Check if update was successful
+            // if ($stmt->rowCount() > 0) {
+            //     echo json_encode(["success" => true, "image" => $returnValueImage]);
+            // } else {
+            //     echo json_encode(["error" => "Database update failed or no changes made"]);
+            // }
+
+            exit();
         } catch (\Throwable $th) {
-            return $th;
+            echo json_encode(["error" => $th->getMessage()]);
+            exit();
         }
     }
-
 
     function uploadImage()
     {
@@ -147,7 +172,7 @@ class User
             $fileExt = explode(".", $fileName);
             $fileActualExt = strtolower(end($fileExt));
 
-            $allowed = ["jpg", "jpeg", "png", "gif", "webp"];
+            $allowed = ["jpg", "jpeg", "png"];
 
             if (in_array($fileActualExt, $allowed)) {
                 if ($fileError === 0) {
@@ -199,23 +224,23 @@ switch ($operation) {
     case "updateImage":
         echo $user->updateImage($json);
         break;
-        // case "getAdmin":
-        //     echo $user->getAdmin();
-        //     break;
-        // case "getscholarship_type":
-        //     echo $user->getscholarship_type();
-        //     break;
-        // case "getcourse":
-        //     echo $user->getcourse();
-        //     break;
-        // case "getscholarship_type_list":
-        //     echo $user->getscholarship_type_list();
-        //     break;
-        // case "getSubType":
-        //     echo $user->getSubType();
-        //     break;
-        // case "getschoolyear":
-        //     echo $user->getschoolyear();
+    // case "getAdmin":
+    //     echo $user->getAdmin();
+    //     break;
+    // case "getscholarship_type":
+    //     echo $user->getscholarship_type();
+    //     break;
+    // case "getcourse":
+    //     echo $user->getcourse();
+    //     break;
+    // case "getscholarship_type_list":
+    //     echo $user->getscholarship_type_list();
+    //     break;
+    // case "getSubType":
+    //     echo $user->getSubType();
+    //     break;
+    // case "getschoolyear":
+    //     echo $user->getschoolyear();
     default:
         echo "WALAY " . $operation . " NGA OPERATION SA UBOS HAHHAHA BOBO NOYNAY";
         break;

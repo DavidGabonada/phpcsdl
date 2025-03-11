@@ -273,10 +273,7 @@ class User
     }
   }
 
-
-
   function AddScholar($json)
-
   {
     include "connection.php";
 
@@ -284,78 +281,101 @@ class User
     $conn->beginTransaction();
 
     try {
-      // SQL for tbl_scholars (insert or update only new data)
+      // 🔹 Fetch session_id from session_name
+      $sqlSession = "SELECT session_id FROM tbl_academic_session WHERE session_name = :session_name";
+      $stmtSession = $conn->prepare($sqlSession);
+      $stmtSession->bindParam(":session_name", $student["stud_active_academic_session_id"]);
+      $stmtSession->execute();
+      $sessionRow = $stmtSession->fetch(PDO::FETCH_ASSOC);
+
+      if (!$sessionRow) {
+        throw new Exception("Invalid academic session: " . $student["stud_active_academic_session_id"]);
+      }
+
+      $session_id = $sessionRow["session_id"]; // Retrieved session_id
+
+      // 🔹 Insert or update tbl_scholars
       $sql1 = "INSERT INTO tbl_scholars (
-                          stud_id, stud_name, stud_scholarship_id, stud_department_id, stud_course_id, 
-                          stud_password, stud_image_filename, stud_contactNumber, stud_email, stud_user_level
-                      ) VALUES (
-                          :stud_id, :stud_name, :stud_scholarship_id, :stud_department_id, :stud_course_id, 
-                          :stud_password, :stud_image_filename, :stud_contactNumber, :stud_email, 1
-                      ) ON DUPLICATE KEY UPDATE 
-                          stud_name = VALUES(stud_name),
-                          stud_scholarship_id = VALUES(stud_scholarship_id),
-                          stud_department_id = VALUES(stud_department_id),
-                          stud_course_id = VALUES(stud_course_id),
-                          stud_password = VALUES(stud_password),
-                          stud_image_filename = VALUES(stud_image_filename),
-                          stud_contactNumber = VALUES(stud_contactNumber),
-                          stud_email = VALUES(stud_email)";
+                        stud_id, stud_name, stud_scholarship_id, stud_department_id, stud_course_id, 
+                        stud_password, stud_image_filename, stud_contactNumber, stud_email, stud_user_level
+                    ) VALUES (
+                        :stud_id, :stud_name, :stud_scholarship_id, :stud_department_id, :stud_course_id, 
+                        :stud_password, NULL, :stud_contactNumber, :stud_email, 1
+                    ) ON DUPLICATE KEY UPDATE 
+                        stud_name = VALUES(stud_name),
+                        stud_scholarship_id = VALUES(stud_scholarship_id),
+                        stud_department_id = VALUES(stud_department_id),
+                        stud_course_id = VALUES(stud_course_id),
+                        stud_password = VALUES(stud_password),
+                        stud_contactNumber = VALUES(stud_contactNumber),
+                        stud_email = VALUES(stud_email)";
 
       $stmt1 = $conn->prepare($sql1);
 
-      // Generate hashed password
+      // Hash password
       $password = password_hash($student["stud_id"], PASSWORD_BCRYPT);
 
-      // Bind parameters for tbl_scholars
-      $stmt1->bindParam(":stud_id", $student["stud_id"]);
-      $stmt1->bindParam(":stud_name", $student["stud_name"]);
-      $stmt1->bindParam(":stud_scholarship_id", $student["stud_scholarship_id"]);
-      $stmt1->bindParam(":stud_department_id", $student["stud_department_id"]);
-      $stmt1->bindParam(":stud_course_id", $student["stud_course_id"]);
-      $stmt1->bindParam(":stud_password", $password);
-      $stmt1->bindParam(":stud_image_filename", $student["stud_image_file"]);
-      $stmt1->bindParam(":stud_contactNumber", $student["stud_contactNumber"]);
-      $stmt1->bindParam(":stud_email", $student["stud_email"]);
-      $stmt1->execute();
+      // Bind scholar parameters
+      $stmt1->execute([
+        ':stud_id' => $student["stud_id"],
+        ':stud_name' => $student["stud_name"],
+        ':stud_scholarship_id' => $student["stud_scholarship_id"],
+        ':stud_department_id' => $student["stud_department_id"],
+        ':stud_course_id' => $student["stud_course_id"],
+        ':stud_password' => $password,
+        ':stud_contactNumber' => $student["stud_contactNumber"],
+        ':stud_email' => $student["stud_email"]
+      ]);
 
-      // SQL for tbl_activescholars (update existing records without modifying stud_active_id)
-      $sql2 = "UPDATE tbl_activescholars SET 
-                          stud_active_academic_session_id = :stud_active_academic_session_id,
-                          stud_active_year_id = :stud_active_year_id,
-                          stud_active_status_id = :stud_active_status_id,
-                          stud_active_percent_id = :stud_active_percent_id,
-                          stud_active_amount = :stud_active_amount,
-                          stud_active_applied_on_tuition = :stud_active_applied_on_tuition,
-                          stud_active_applied_on_misc = :stud_active_applied_on_misc,
-                          stud_date = :stud_date,
-                          stud_modified_by = :stud_modified_by,
-                          stud_modified_date = :stud_modified_date
-                      WHERE stud_active_id = :stud_active_id";
+      // 🔹 Insert or update tbl_activescholars using retrieved session_id
+      $sql2 = "INSERT INTO tbl_activescholars (
+                        stud_active_id, stud_active_academic_session_id, stud_active_year_id, 
+                        stud_active_status_id, stud_active_percent_id, stud_active_amount, 
+                        stud_active_applied_on_tuition, stud_active_applied_on_misc, 
+                        stud_date, stud_modified_by, stud_modified_date
+                    ) VALUES (
+                        :stud_active_id, :stud_active_academic_session_id, :stud_active_year_id,
+                        :stud_active_status_id, :stud_active_percent_id, :stud_active_amount, 
+                        :stud_active_applied_on_tuition, :stud_active_applied_on_misc, 
+                        :stud_date, :stud_modified_by, :stud_modified_date
+                    ) ON DUPLICATE KEY UPDATE 
+                        stud_active_academic_session_id = VALUES(stud_active_academic_session_id),
+                        stud_active_year_id = VALUES(stud_active_year_id),
+                        stud_active_status_id = VALUES(stud_active_status_id),
+                        stud_active_percent_id = VALUES(stud_active_percent_id),
+                        stud_active_amount = VALUES(stud_active_amount),
+                        stud_active_applied_on_tuition = VALUES(stud_active_applied_on_tuition),
+                        stud_active_applied_on_misc = VALUES(stud_active_applied_on_misc),
+                        stud_date = VALUES(stud_date),
+                        stud_modified_by = VALUES(stud_modified_by),
+                        stud_modified_date = VALUES(stud_modified_date)";
 
       $stmt2 = $conn->prepare($sql2);
 
-      // Bind parameters for tbl_activescholars (update only, no insert)
-      $stmt2->bindParam(":stud_active_id", $student["stud_id"]);
-      $stmt2->bindParam(":stud_active_academic_session_id", $student["stud_active_academic_session_id"]);
-      $stmt2->bindParam(":stud_active_year_id", $student["stud_active_year_id"]);
-      $stmt2->bindParam(":stud_active_status_id", $student["stud_status_id"]);
-      $stmt2->bindParam(":stud_active_percent_id", $student["stud_active_percent_id"]);
-      $stmt2->bindParam(":stud_active_amount", $student["stud_active_amount"]);
-      $stmt2->bindParam(":stud_active_applied_on_tuition", $student["stud_active_applied_on_tuition"]);
-      $stmt2->bindParam(":stud_active_applied_on_misc", $student["stud_active_applied_on_misc"]);
-      $stmt2->bindParam(":stud_date", $student["stud_date"]);
-      $stmt2->bindParam(":stud_modified_by", $student["stud_modified_by"]);
-      $stmt2->bindParam(":stud_modified_date", $student["stud_modified_date"]);
-      $stmt2->execute();
+      // Bind active scholar parameters with retrieved session_id
+      $stmt2->execute([
+        ':stud_active_id' => $student["stud_id"],
+        ':stud_active_academic_session_id' => $session_id, // Use retrieved session_id
+        ':stud_active_year_id' => $student["stud_active_year_id"],
+        ':stud_active_status_id' => $student["stud_active_status_id"],
+        ':stud_active_percent_id' => $student["stud_active_percent_id"],
+        ':stud_active_amount' => $student["stud_active_amount"],
+        ':stud_active_applied_on_tuition' => $student["stud_active_applied_on_tuition"],
+        ':stud_active_applied_on_misc' => $student["stud_active_applied_on_misc"],
+        ':stud_date' => $student["stud_date"],
+        ':stud_modified_by' => $student["stud_modified_by"],
+        ':stud_modified_date' => $student["stud_modified_date"]
+      ]);
 
       $conn->commit();
-      return 1;
+      return $stmt2->rowCount() > 0 ? 1 : 0;
     } catch (Exception $e) {
       $conn->rollBack();
-      echo "Error: " . $e->getMessage();
-      return 0;
+      return "Error: " . $e->getMessage();
     }
   }
+
+
 
   function AddScholarBatch($json)
   {
@@ -1004,6 +1024,7 @@ class User
     $returnValue["scholarshipSub"] = $this->getPercentStype();
     $returnValue["department"] = $this->getDepartment();
     $returnValue["year"] = $this->getschoolyear();
+    $returnValue["status"] = $this->getStudStatus();
     // $returnValue["scholarshipSub"] = $this->getSubType();
     // $returnValue["modality"] = $this->getModality();
     return json_encode($returnValue);
@@ -1147,6 +1168,14 @@ class User
   {
     include "connection.php";
     $sql = "SELECT * FROM tbl_academic_session";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
+    return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
+  }
+  function getScholarStatus()
+  {
+    include "connection.php";
+    $sql = "SELECT * FROM tbl_studstatus";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
     return $stmt->rowCount() > 0 ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
@@ -1732,7 +1761,7 @@ switch ($operation) {
     echo $user->addScholarshipType($json);
     break;
   case "AddScholar":
-    echo $user->AddScholar($json);
+    echo json_encode($user->AddScholar($json));
     break;
   case "AddScholarBatch":
     echo $user->AddScholarBatch($json);
@@ -1867,6 +1896,9 @@ switch ($operation) {
     break;
   case "getDepartment":
     echo $user->getDepartment();
+    break;
+  case "getScholarStatus":
+    echo $user->getScholarStatus();
     break;
   case "getOfficeMaster":
     echo $user->getOfficeMaster();
