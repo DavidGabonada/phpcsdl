@@ -1,6 +1,6 @@
 <?php
 $host = 'localhost';
-$dbname = 'hk_db';
+$dbname = 'dbcsdlhk';
 $user = 'root';
 $pass = '';
 

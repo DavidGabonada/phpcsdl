@@ -19,21 +19,30 @@ class User
         $stmtScholars->bindParam(":username", $json["username"]);
         $stmtScholars->execute();
 
+        // Check if user exists in scholars table
         if ($stmtScholars->rowCount() > 0) {
             $user = $stmtScholars->fetch(PDO::FETCH_ASSOC);
 
             // Use password_verify to validate the password
             if (password_verify($json["password"], $user["stud_password"])) {
-
-                // **New: Check if the password is the default (same as student ID)**
+                
+                
+                // If password is correct
                 $isDefaultPassword = password_verify($user["stud_id"], $user["stud_password"]);
-
                 return json_encode([
                     "stud_id" => $user["stud_id"],
                     "stud_name" => $user["stud_name"],
                     "stud_email" => $user["stud_email"],
                     "stud_user_level" => $user["userLevel_name"],
-                    "is_default_password" => $isDefaultPassword  // **New flag**
+                    "stud_login_attempts" => $user["stud_login_attempts"],
+                    "stud_authentication_status" => $user["stud_authentication_status"],
+                    "is_default_password" => $isDefaultPassword
+                ]);
+            } else {
+                // If password is incorrect for an existing user
+                return json_encode([
+                    "status" => 2, // Incorrect password
+                    "stud_login_attempts" => $user["stud_login_attempts"]
                 ]);
             }
         }
@@ -45,24 +54,33 @@ class User
         $stmtSupervisors->bindParam(":username", $json["username"]);
         $stmtSupervisors->execute();
 
+        // Check if user exists in supervisors table
         if ($stmtSupervisors->rowCount() > 0) {
             $user = $stmtSupervisors->fetch(PDO::FETCH_ASSOC);
 
             // Use password_verify to validate the password
             if (password_verify($json["password"], $user["supM_password"])) {
-
-                // **New: Check if the password is the default (same as supervisor ID)**
+                // If password is correct
                 $isDefaultPassword = password_verify($user["supM_id"], $user["supM_password"]);
-
                 return json_encode([
                     "supM_id" => $user["supM_id"],
                     "supM_name" => $user["supM_name"],
                     "supM_email" => $user["supM_email"],
-                    "is_default_password" => $isDefaultPassword  // **New flag**
+                    "supM_login_attempts" => $user["supM_login_attempts"],
+                    "supM_password" => $user["supM_password"],
+                    "supM_authentication_status" => $user["supM_authentication_status"],
+                    "is_default_password" => $isDefaultPassword
+                ]);
+            } else {
+                // If password is incorrect for an existing user
+                return json_encode([
+                    "status" => 2, // Incorrect password
+                    "supM_login_attempts" => $user["supM_login_attempts"]
                 ]);
             }
         }
 
+        // Return a specific error message if username doesn't exist in either table
         return 0;
     }
 
@@ -70,33 +88,33 @@ class User
     function adminLogin($json)
     {
         include "connection.php";
-
+    
         $json = json_decode($json, true);
-
+    
         if (!isset($json["username"], $json["password"])) {
             return json_encode(["success" => false, "message" => "Missing credentials"]);
         }
-
+    
         $username = $json["username"];
         $password = $json["password"];
-
-        $sql = "SELECT * FROM tbl_admin WHERE adm_email = :username AND BINARY adm_password = :password";
+    
+        // Modify the SQL query to fetch the user by email only
+        $sql = "SELECT * FROM tbl_admin WHERE adm_email = :username";
         $stmt = $conn->prepare($sql);
         $stmt->bindParam(":username", $username);
-        $stmt->bindParam(":password", $password);
         $stmt->execute();
-
-        return $stmt->rowCount() > 0 ? $stmt->fetch(PDO::FETCH_ASSOC) : 0;
-
-        // $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-        // if ($user && password_verify($password, $user["adm_password"])) {
-        //     return json_encode(["success" => true, "message" => "Login successful"]);
-        // }
-
-        // return json_encode(["success" => false, "message" => "Invalid credentials"]);
+    
+        // Fetch the user
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+        // Verify the password using password_verify
+        if ($user && password_verify($password, $user["adm_password"])) {
+            return $user; // Return the user if password matches
+        }
+    
+        return 0; // Return 0 if credentials are invalid
     }
+    
 
 
 
